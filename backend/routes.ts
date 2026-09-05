@@ -4,7 +4,7 @@
 * AudioFACTORY API Router with Strict Authoritative Authentication Middleware
 */
 import { Router } from 'express';
-import { verifyAuth } from './middleware/auth.js';
+import { verifyAuth } from './middleware/auth';
 import {
   handleGenerateSpeech,
   handleGeminiTts,
@@ -19,7 +19,7 @@ import {
   handleAnalyzeScript,
   handleDramatize,
   handleGetJobs,
-} from './controllers/aiController.js';
+} from './controllers/aiController';
 import {
   handleGetPlans,
   handleGetEntitlement,
@@ -28,7 +28,7 @@ import {
   handleRestorePurchases,
   handleGooglePlayRtdnWebhook,
   handleSimulatePurchase,
-} from './controllers/billingController.js';
+} from './controllers/billingController';
 
 export const apiRouter = Router();
 

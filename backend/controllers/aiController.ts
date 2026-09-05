@@ -5,9 +5,9 @@
  * All AI provider integrations are strictly backend-only. Never exposes API keys to client.
  */
 import { Request, Response } from 'express';
-import { GenerationService, GenerationUserContext } from '../services/generationService.js';
-import { JobService } from '../services/jobService.js';
-import { ProviderName } from '../providers/AIProvider.js';
+import { GenerationService, GenerationUserContext } from '../services/generationService';
+import { JobService } from '../services/jobService';
+import { ProviderName } from '../providers/AIProvider';
 
 export function extractUserFromRequest(req: Request): GenerationUserContext {
   if (req.user) {

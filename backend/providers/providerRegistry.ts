@@ -4,9 +4,9 @@
  * AudioFACTORY AI Provider Registry
  * Provides unified access and fallbacks for AI provider implementations.
  */
-import { AIProvider, ProviderName, VoiceInfo } from './AIProvider.js';
-import { GeminiProvider } from './GeminiProvider.js';
-import { ElevenLabsProvider } from './ElevenLabsProvider.js';
+import { AIProvider, ProviderName, VoiceInfo } from './AIProvider';
+import { GeminiProvider } from './GeminiProvider';
+import { ElevenLabsProvider } from './ElevenLabsProvider';
 
 class ProviderRegistry {
   private geminiProvider: GeminiProvider;

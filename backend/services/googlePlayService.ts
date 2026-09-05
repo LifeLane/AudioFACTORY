@@ -6,7 +6,7 @@
  */
 import crypto from 'crypto';
 // Remove firestore import
-import { serverDb } from '../usageManager.js';
+import { serverDb } from '../usageManager';
 import { 
   PRODUCT_IDS, 
   ProductIdentifier, 
@@ -14,10 +14,10 @@ import {
   PurchaseRecord, 
   SubscriptionLifecycleStatus,
   Entitlement
-} from '../../shared/types.js';
-import { PLANS, getPlanFromProductId } from '../../shared/plans.js';
-import { config } from '../config.js';
-import { saveUserEntitlement, invalidateEntitlementCache, resolveEntitlement } from './entitlementResolver.js';
+} from '../../shared/types';
+import { PLANS, getPlanFromProductId } from '../../shared/plans';
+import { config } from '../config';
+import { saveUserEntitlement, invalidateEntitlementCache, resolveEntitlement } from './entitlementResolver';
 
 export interface VerifyPlayPurchaseInput {
   userId: string;

@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { apiRouter } from '../backend/routes.js';
+import { apiRouter } from '../backend/routes';
 
 const app = express();
 

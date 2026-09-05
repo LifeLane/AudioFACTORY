@@ -4,12 +4,12 @@
  * AudioFACTORY Authoritative Billing & Entitlement Controller
  */
 import { Request, Response } from 'express';
-import { PLANS, getPlanFromProductId } from '../../shared/plans.js';
-import { resolveEntitlement, saveUserEntitlement } from '../services/entitlementResolver.js';
-import { GooglePlayService } from '../services/googlePlayService.js';
-import { UserPlan, Entitlement, PurchaseRecord } from '../../shared/types.js';
-import { extractUserFromRequest } from './aiController.js';
-import { getTodayUsageRecord, serverDb } from '../usageManager.js';
+import { PLANS, getPlanFromProductId } from '../../shared/plans';
+import { resolveEntitlement, saveUserEntitlement } from '../services/entitlementResolver';
+import { GooglePlayService } from '../services/googlePlayService';
+import { UserPlan, Entitlement, PurchaseRecord } from '../../shared/types';
+import { extractUserFromRequest } from './aiController';
+import { getTodayUsageRecord, serverDb } from '../usageManager';
 
 export function handleGetPlans(_req: Request, res: Response): void {
   res.json({

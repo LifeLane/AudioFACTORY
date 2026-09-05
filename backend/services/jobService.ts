@@ -4,8 +4,8 @@
  * AudioFACTORY Structured Generation Job Service
  * Persists and updates generation jobs in Firestore under users/{uid}/generationJobs/{jobId}
  */
-import { serverDb } from '../usageManager.js';
-import { ProviderName, JobType } from '../providers/AIProvider.js';
+import { serverDb } from '../usageManager';
+import { ProviderName, JobType } from '../providers/AIProvider';
 
 export interface GenerationJobRecord {
   jobId: string;

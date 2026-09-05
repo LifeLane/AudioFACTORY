@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * AudioFACTORY Quota & Usage Store (Firestore-backed)
  */
-import { UsageRecord, UserPlan } from '../shared/types.js';
+import { UsageRecord, UserPlan } from '../shared/types';
 import { 
   getTodayUsageRecord, 
   atomicallyReserveGeneration, 
   recordGenerationResult,
   getTodayUtcDateString
-} from './usageManager.js';
-import { resolveEntitlement, saveUserEntitlement } from './services/entitlementResolver.js';
+} from './usageManager';
+import { resolveEntitlement, saveUserEntitlement } from './services/entitlementResolver';
 
 export function getTodayUtcString(): string {
   return getTodayUtcDateString();
