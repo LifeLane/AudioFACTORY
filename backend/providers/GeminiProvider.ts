@@ -5,7 +5,7 @@
  * Server-only integration with @google/genai (Gemini 2.5 Flash & Speech Synthesis).
  */
 import { GoogleGenAI, Modality } from '@google/genai';
-import { getGeminiKey } from '../config';
+import { getGeminiKey, getGroqKey } from '../config';
 import {
   AIProvider,
   ProviderName,
@@ -39,6 +39,56 @@ export const GEMINI_PREBUILT_VOICES: VoiceInfo[] = [
   { id: 'Pegasus', name: 'Pegasus (Gemini Broadcast Male)', gender: 'Male', languageCode: 'en-US', languageName: 'English (US)', provider: 'gemini' },
 ];
 
+async function callGroqCompletions(prompt: string, jsonMode: boolean = false): Promise<string> {
+  const apiKey = getGroqKey();
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is not configured on the server as fallback.');
+  }
+
+  const payload: any = {
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      {
+        role: 'system',
+        content: jsonMode
+          ? 'You are a professional audio script editor. Respond only with valid JSON. Do not write markdown blocks or any other explanation.'
+          : 'You are a professional voice director. Respond only with the requested text.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    temperature: 0.7,
+  };
+
+  if (jsonMode) {
+    payload.response_format = { type: 'json_object' };
+  }
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Groq API returned status ${res.status}: ${text}`);
+  }
+
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('Groq returned an empty response.');
+  }
+
+  return content;
+}
+
 export class GeminiProvider implements AIProvider {
   public readonly name: ProviderName = 'gemini';
 
@@ -53,6 +103,45 @@ export class GeminiProvider implements AIProvider {
       throw new Error('GEMINI_API_KEY is not configured on the server.');
     }
     return new GoogleGenAI({ apiKey: key });
+  }
+
+  private parseScriptResponse(rawText: string): ScriptResult {
+    let cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(cleanedText);
+    } catch {
+      const match = cleanedText.match(/\{[\s\S]*\}/);
+      if (match) {
+        parsed = JSON.parse(match[0]);
+      } else {
+        throw new Error('Failed to parse structured script response.');
+      }
+    }
+
+    const speakers: ScriptSpeaker[] = (parsed.speakers || []).map((s: any, idx: number) => ({
+      name: s.name || `Speaker ${idx + 1}`,
+      voice: s.voice || (s.gender === 'FEMALE' ? 'Leda' : 'Puck'),
+      provider: 'gemini' as const,
+      gender: (s.gender === 'FEMALE' ? 'FEMALE' : 'MALE') as 'MALE' | 'FEMALE',
+      color: s.color || (idx === 0 ? 'yellow' : idx === 1 ? 'blue' : 'red'),
+    }));
+
+    const lines: ScriptLine[] = (parsed.lines || []).map((l: any, idx: number) => ({
+      id: `line-${idx + 1}-${Date.now()}`,
+      speaker: l.speaker || speakers[0]?.name || 'Speaker 1',
+      text: l.text || '',
+      scene: l.scene || 'Scene 1',
+      emotion: l.emotion || 'Natural',
+      status: 'idle' as const,
+    }));
+
+    return {
+      title: parsed.title || 'Generated Audio Script',
+      summary: parsed.summary || 'A multi-speaker audio performance.',
+      speakers,
+      lines,
+    };
   }
 
   private async executeWithRetry<T>(fn: () => Promise<T>, maxRetries: number = 2): Promise<T> {
@@ -181,50 +270,29 @@ export class GeminiProvider implements AIProvider {
       Make sure the dialogue has between 4 and 8 dynamic conversational turns that flow naturally.
     `;
 
-    const response = await this.executeWithRetry(async () => {
-      return await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-    });
-
-    let rawText = response.text || '{}';
-    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    let parsed: any;
     try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      const match = rawText.match(/\{[\s\S]*\}/);
-      if (match) {
-        parsed = JSON.parse(match[0]);
-      } else {
-        throw new Error('Failed to parse structured script response from Gemini.');
+      const response = await this.executeWithRetry(async () => {
+        return await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+        });
+      });
+
+      const rawText = response.text || '{}';
+      return this.parseScriptResponse(rawText);
+    } catch (err) {
+      console.warn('[GEMINI] generateScript failed. Attempting Groq fallback...', err);
+      if (getGroqKey()) {
+        try {
+          const groqResponse = await callGroqCompletions(prompt, true);
+          return this.parseScriptResponse(groqResponse);
+        } catch (groqErr) {
+          console.error('[GROQ] Fallback generateScript also failed:', groqErr);
+          throw err;
+        }
       }
+      throw err;
     }
-
-    const speakers: ScriptSpeaker[] = (parsed.speakers || []).map((s: any, idx: number) => ({
-      name: s.name || `Speaker ${idx + 1}`,
-      voice: s.voice || (s.gender === 'FEMALE' ? 'Leda' : 'Puck'),
-      provider: 'gemini' as const,
-      gender: (s.gender === 'FEMALE' ? 'FEMALE' : 'MALE') as 'MALE' | 'FEMALE',
-      color: s.color || (idx === 0 ? 'yellow' : idx === 1 ? 'blue' : 'red'),
-    }));
-
-    const lines: ScriptLine[] = (parsed.lines || []).map((l: any, idx: number) => ({
-      id: `line-${idx + 1}-${Date.now()}`,
-      speaker: l.speaker || speakers[0]?.name || 'Speaker 1',
-      text: l.text || '',
-      scene: l.scene || 'Scene 1',
-      emotion: l.emotion || 'Natural',
-      status: 'idle' as const,
-    }));
-
-    return {
-      title: parsed.title || 'Generated Audio Script',
-      summary: parsed.summary || 'A multi-speaker audio performance.',
-      speakers,
-      lines,
-    };
   }
 
   public async generateDialogue(params: DialogueParams): Promise<DialogueResult> {
@@ -292,50 +360,29 @@ export class GeminiProvider implements AIProvider {
       }
     `;
 
-    const response = await this.executeWithRetry(async () => {
-      return await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
-    });
-
-    let rawText = response.text || '{}';
-    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-    let parsed: any;
     try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      const match = rawText.match(/\{[\s\S]*\}/);
-      if (match) {
-        parsed = JSON.parse(match[0]);
-      } else {
-        throw new Error('Failed to parse analyzed script response.');
+      const response = await this.executeWithRetry(async () => {
+        return await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+        });
+      });
+
+      const rawText = response.text || '{}';
+      return this.parseScriptResponse(rawText);
+    } catch (err) {
+      console.warn('[GEMINI] analyzeScript failed. Attempting Groq fallback...', err);
+      if (getGroqKey()) {
+        try {
+          const groqResponse = await callGroqCompletions(prompt, true);
+          return this.parseScriptResponse(groqResponse);
+        } catch (groqErr) {
+          console.error('[GROQ] Fallback analyzeScript also failed:', groqErr);
+          throw err;
+        }
       }
+      throw err;
     }
-
-    const speakers: ScriptSpeaker[] = (parsed.speakers || []).map((s: any, idx: number) => ({
-      name: s.name || `Speaker ${idx + 1}`,
-      voice: s.voice || (s.gender === 'FEMALE' ? 'Leda' : 'Puck'),
-      provider: 'gemini' as const,
-      gender: (s.gender === 'FEMALE' ? 'FEMALE' : 'MALE') as 'MALE' | 'FEMALE',
-      color: s.color || (idx === 0 ? 'yellow' : idx === 1 ? 'blue' : 'red'),
-    }));
-
-    const lines: ScriptLine[] = (parsed.lines || []).map((l: any, idx: number) => ({
-      id: `line-${idx + 1}-${Date.now()}`,
-      speaker: l.speaker || speakers[0]?.name || 'Speaker 1',
-      text: l.text || '',
-      scene: l.scene || 'Scene 1',
-      emotion: l.emotion || 'Natural',
-      status: 'idle' as const,
-    }));
-
-    return {
-      title: parsed.title || 'Analyzed Production Script',
-      summary: parsed.summary || 'Parsed dialogue script.',
-      speakers,
-      lines,
-    };
   }
 
   public async dramatize(text: string, styleInstruction?: string): Promise<string> {
@@ -355,14 +402,28 @@ export class GeminiProvider implements AIProvider {
       Return ONLY the final dramatized spoken text without explanations, greetings, or quotation marks.
     `;
 
-    const response = await this.executeWithRetry(async () => {
-      return await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
+    try {
+      const response = await this.executeWithRetry(async () => {
+        return await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+        });
       });
-    });
 
-    return response.text?.trim() || text;
+      return response.text?.trim() || text;
+    } catch (err) {
+      console.warn('[GEMINI] dramatize failed. Attempting Groq fallback...', err);
+      if (getGroqKey()) {
+        try {
+          const groqResponse = await callGroqCompletions(prompt, false);
+          return groqResponse.trim();
+        } catch (groqErr) {
+          console.error('[GROQ] Fallback dramatize also failed:', groqErr);
+          throw err;
+        }
+      }
+      throw err;
+    }
   }
 
   public async generateBGM(_params: BgmParams): Promise<BgmResult> {

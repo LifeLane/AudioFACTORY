@@ -12,6 +12,7 @@ export const config = {
   // AI Keys - Loaded strictly in server environment, never sent to browser
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.API_KEY || '',
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
+  groqApiKey: process.env.GROQ_API_KEY || '',
   
   // Google Play Billing Credentials
   googlePlayServiceAccountKey: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY || '',
@@ -33,6 +34,14 @@ export function getElevenLabsKey(): string {
   const key = config.elevenLabsApiKey;
   if (!key) {
     console.warn('[SERVER] Warning: ELEVENLABS_API_KEY is not configured on server.');
+  }
+  return key;
+}
+
+export function getGroqKey(): string {
+  const key = config.groqApiKey;
+  if (!key) {
+    console.warn('[SERVER] Warning: GROQ_API_KEY is not configured on server.');
   }
   return key;
 }

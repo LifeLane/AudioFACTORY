@@ -30,6 +30,24 @@ import {
 } from '../usageManager';
 import { PLANS } from '../../shared/plans';
 
+export function mapGeminiToElevenLabs(voiceId: string): string {
+  const mapping: Record<string, string> = {
+    'Algieba': 'pNInz6obpgDQGcFmaJgB', // Adam
+    'Puck': 'yoZ06aMxZJJ28mfd3POQ', // Sam
+    'Leda': 'EXAVITQu4vr4xnSDxMaL', // Bella
+    'Fenrir': 'VR6AewLTigWG4xSOukaG', // Arnold
+    'Aoede': 'AZnzlk1XvdvUeBnXmlld', // Domi
+    'Kore': 'MF3mGyEYCl7XYWbV9V6O', // Elli
+    'Charon': 'ErXwobaYiN019PkySvjV', // Antoni
+    'Vindemiatrix': '21m00Tcm4TlvDq8ikWAM', // Rachel
+    'Zubenelgenubi': 'IKne3meq5aSn9XLyUdCD', // Charlie
+    'Enceladus': 'TxGEqnHWrfWFTfGW9XjX', // Josh
+    'Orion': 'pNInz6obpgDQGcFmaJgB', // Adam
+    'Pegasus': 'VR6AewLTigWG4xSOukaG', // Arnold
+  };
+  return mapping[voiceId] || voiceId;
+}
+
 export interface GenerationUserContext {
   userId: string;
   isGuest: boolean;
@@ -169,7 +187,15 @@ export class GenerationService {
       throw err;
     }
 
-    const providerName: ProviderName = params.provider || (voiceNameOrId.length > 15 ? 'elevenlabs' : 'gemini');
+    const isElevenLabsConfigured = providerRegistry.getElevenLabsProvider().isConfigured();
+    let providerName: ProviderName = params.provider || (voiceNameOrId.length > 15 ? 'elevenlabs' : 'gemini');
+    let finalVoiceId = voiceNameOrId;
+
+    if (isElevenLabsConfigured && !params.provider) {
+      providerName = 'elevenlabs';
+      finalVoiceId = mapGeminiToElevenLabs(voiceNameOrId);
+    }
+
     const provider = providerRegistry.getProvider(providerName);
 
     return this.executeProtectedJob<SpeechResult>(
@@ -178,15 +204,15 @@ export class GenerationService {
       providerName,
       {
         textLength: text.length,
-        voice: voiceNameOrId,
-        format: format || 'wav',
+        voice: finalVoiceId,
+        format: format || (providerName === 'elevenlabs' ? 'mp3' : 'wav'),
       },
       async () => {
         const speech = await provider.generateSpeech({
           text,
-          voiceNameOrId,
-          styleInstruction,
-          format,
+          voiceNameOrId: finalVoiceId,
+          styleInstruction: providerName === 'gemini' ? styleInstruction : undefined,
+          format: format || (providerName === 'elevenlabs' ? 'mp3' : 'wav'),
         });
 
         return {
@@ -262,6 +288,7 @@ export class GenerationService {
     // Process lines using appropriate provider for each line
     const geminiProvider = providerRegistry.getGeminiProvider();
     const elevenLabsProvider = providerRegistry.getElevenLabsProvider();
+    const isElevenLabsConfigured = elevenLabsProvider.isConfigured();
 
     return this.executeProtectedJob<DialogueResult>(
       userCtx,
@@ -276,14 +303,23 @@ export class GenerationService {
 
         for (let i = 0; i < params.lines.length; i++) {
           const line = params.lines[i];
-          const lineProviderName: ProviderName = line.provider || (line.voice?.length > 15 ? 'elevenlabs' : 'gemini');
+          let lineProviderName: ProviderName = line.provider || (line.voice?.length > 15 ? 'elevenlabs' : 'gemini');
+          let finalVoiceId = line.voice;
+
+          if (isElevenLabsConfigured && !line.provider) {
+            lineProviderName = 'elevenlabs';
+            finalVoiceId = mapGeminiToElevenLabs(line.voice);
+          }
+
           const provider = lineProviderName === 'elevenlabs' ? elevenLabsProvider : geminiProvider;
 
           const speech = await provider.generateSpeech({
             text: line.text,
-            voiceNameOrId: line.voice,
-            styleInstruction: `Speak in character as ${line.speaker}. Emotion: ${line.emotion || 'Natural'}.`,
-            format: params.format || 'wav',
+            voiceNameOrId: finalVoiceId,
+            styleInstruction: lineProviderName === 'gemini'
+              ? `Speak in character as ${line.speaker}. Emotion: ${line.emotion || 'Natural'}.`
+              : undefined,
+            format: params.format || (lineProviderName === 'elevenlabs' ? 'mp3' : 'wav'),
           });
 
           processedLines.push({
