@@ -159,6 +159,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         text: `Google Sign In failed: ${err.message || 'Please try again'}`, 
         type: 'error' 
       });
+      throw err;
     } finally {
       setAuthLoading(false);
     }
@@ -176,6 +177,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (err: any) {
       console.error("Guest sign in error:", err);
       setStatusMessage({ text: `Guest sign in failed: ${err.message || 'Please try again'}`, type: 'error' });
+      throw err;
     } finally {
       setAuthLoading(false);
     }

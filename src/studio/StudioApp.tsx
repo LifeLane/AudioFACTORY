@@ -105,6 +105,16 @@ export const StudioApp: React.FC = () => {
   const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
   const [isQuotaExhaustedModalOpen, setIsQuotaExhaustedModalOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+
+  const handleRequireAuth = useCallback((action?: () => void) => {
+    if (action) {
+      setPendingAuthAction(() => action);
+    } else {
+      setPendingAuthAction(null);
+    }
+    setIsAuthModalOpen(true);
+  }, []);
 
   // Deep Link & Native Android Lifecycle Handler
   useDeepLinks({
@@ -239,8 +249,14 @@ export const StudioApp: React.FC = () => {
   };
 
   // Dramatize Text via Gemini AI
-  const handleDramatize = async () => {
+  const handleDramatize = async (skipAuthCheck = false) => {
     if (!text.trim() || isDramatizing) return;
+    
+    if (!user && !skipAuthCheck) {
+      handleRequireAuth(() => handleDramatize(true));
+      return;
+    }
+
     setIsDramatizing(true);
     setAudioError(null);
     try {
@@ -255,11 +271,11 @@ export const StudioApp: React.FC = () => {
   };
 
   // Generate Speech Audio
-  const handleGenerateSpeech = async () => {
+  const handleGenerateSpeech = async (skipAuthCheck = false) => {
     if (!text.trim() || isGenerating) return;
 
-    if (!user) {
-      setIsAuthModalOpen(true);
+    if (!user && !skipAuthCheck) {
+      handleRequireAuth(() => handleGenerateSpeech(true));
       return;
     }
 
@@ -579,7 +595,7 @@ export const StudioApp: React.FC = () => {
               onBgmOverlay={(buf) => setBgmBuffer(buf)} 
               loadedProject={loadedMultiSpeakerProject}
               onOpenCloudModal={() => setIsCloudModalOpen(true)}
-              onRequireAuth={() => setIsAuthModalOpen(true)}
+              onRequireAuth={handleRequireAuth}
             />
           </div>
         )}
@@ -590,7 +606,7 @@ export const StudioApp: React.FC = () => {
               onBgmBufferGenerated={(buf: AudioBuffer) => setBgmBuffer(buf)}
               activeBgmBuffer={bgmBuffer}
               onOpenVoiceCloning={() => setIsCloningOpen(true)}
-              onRequireAuth={() => setIsAuthModalOpen(true)}
+              onRequireAuth={handleRequireAuth}
             />
           </div>
         )}
@@ -653,9 +669,16 @@ export const StudioApp: React.FC = () => {
       {/* Auth Modal for Onboarding */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingAuthAction(null);
+        }}
         onSuccess={() => {
           setIsAuthModalOpen(false);
+          if (pendingAuthAction) {
+            pendingAuthAction();
+            setPendingAuthAction(null);
+          }
         }}
       />
 

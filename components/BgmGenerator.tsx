@@ -25,9 +25,9 @@ export const BgmGenerator: React.FC<BgmGeneratorProps> = ({ onBgmGenerated, onRe
   const [error, setError] = useState<string | null>(null);
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
-    if (!user) {
-      if (onRequireAuth) onRequireAuth();
+  const handleGenerate = async (skipAuthCheck = false) => {
+    if (!user && !skipAuthCheck) {
+      if (onRequireAuth) onRequireAuth(() => handleGenerate(true));
       return;
     }
     if (!prompt.trim()) return;

@@ -21,8 +21,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setError(null);
     try {
       await loginGoogle();
-      if (onSuccess) onSuccess();
-      onClose();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onClose();
+      }
     } catch (err: any) {
       console.error("Google sign in error:", err);
       setError(err.message || "Failed to sign in with Google.");
@@ -36,8 +39,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setError(null);
     try {
       await loginGuest();
-      if (onSuccess) onSuccess();
-      onClose();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onClose();
+      }
     } catch (err: any) {
       console.error("Guest sign in error:", err);
       setError(err.message || "Failed to continue as guest.");

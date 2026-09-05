@@ -52,9 +52,9 @@ export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
   const [bgmVolume, setBgmVolume] = useState<number>(75);
   const [voiceVolume, setVoiceVolume] = useState<number>(100);
 
-  const handleGenerateQuickSfx = async (preset: typeof QUICK_SFX_PRESETS[0]) => {
-    if (!user) {
-      if (onRequireAuth) onRequireAuth();
+  const handleGenerateQuickSfx = async (preset: typeof QUICK_SFX_PRESETS[0], skipAuthCheck = false) => {
+    if (!user && !skipAuthCheck) {
+      if (onRequireAuth) onRequireAuth(() => handleGenerateQuickSfx(preset, true));
       return;
     }
     setSfxGeneratingId(preset.id);

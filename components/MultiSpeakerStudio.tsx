@@ -290,9 +290,9 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   };
 
   // Generate audio for one line
-  const handleGenerateLine = async (lineId: string) => {
-    if (!user) {
-      if (onRequireAuth) onRequireAuth();
+  const handleGenerateLine = async (lineId: string, skipAuthCheck = false) => {
+    if (!user && !skipAuthCheck) {
+      if (onRequireAuth) onRequireAuth(() => handleGenerateLine(lineId, true));
       return;
     }
 
@@ -351,9 +351,9 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   };
 
   // Generate All lines (Combined sequence)
-  const handleGenerateAllLines = async () => {
-    if (!user) {
-      if (onRequireAuth) onRequireAuth();
+  const handleGenerateAllLines = async (skipAuthCheck = false) => {
+    if (!user && !skipAuthCheck) {
+      if (onRequireAuth) onRequireAuth(() => handleGenerateAllLines(true));
       return;
     }
 
@@ -467,9 +467,9 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   };
 
   // AI Script Generation
-  const handleGenerateScriptWithAI = async () => {
-    if (!user) {
-      if (onRequireAuth) onRequireAuth();
+  const handleGenerateScriptWithAI = async (skipAuthCheck = false) => {
+    if (!user && !skipAuthCheck) {
+      if (onRequireAuth) onRequireAuth(() => handleGenerateScriptWithAI(true));
       return;
     }
 
