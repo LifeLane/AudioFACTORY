@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * AudioFACTORY Client-Side Firebase Service
  */
-import { initializeApp } from 'firebase/app';
+import { auth, db } from '../src/config/firebaseConfig';
 import { 
-  getAuth, 
   signInWithPopup, 
   linkWithPopup,
   GoogleAuthProvider, 
@@ -15,7 +14,6 @@ import {
   User 
 } from 'firebase/auth';
 import { 
-  getFirestore, 
   collection, 
   doc, 
   setDoc, 
@@ -25,15 +23,9 @@ import {
   query,
   orderBy 
 } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
 import { SavedAudioProject, SavedMonologue, ProjectInput, MonologueInput, UsageRecord } from '../types';
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// CRITICAL: Must pass firestoreDatabaseId as second argument
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+export { auth, db };
 
 export enum OperationType {
   CREATE = 'create',

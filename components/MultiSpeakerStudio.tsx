@@ -438,7 +438,9 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
     }
 
     try {
-      const { wavBlob } = await stitchAudioBuffers(buffers, 0.35);
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const combinedBuffer = await stitchAudioBuffers(buffers, audioContext);
+      const wavBlob = audioBufferToWavBlob(combinedBuffer);
       const url = URL.createObjectURL(wavBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -460,9 +462,10 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
     try {
       const res = await generateScript({
         topic,
+        durationMinutes: 1,
         format,
         style: styleTone,
-        speakerCount
+        speakersCount: speakerCount
       });
       setProjectTitle(res.title);
       setProjectSummary(res.summary);

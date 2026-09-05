@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { BgmGenerator } from './BgmGenerator';
 import { generateBGM } from '../services/elevenLabsService';
+import { decodeBase64ToBytes } from '../services/geminiService';
 import { LivePresenceBar } from './LivePresenceBar';
 
 interface AudioProductionSuiteProps {
@@ -51,7 +52,8 @@ export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
     setSfxGeneratingId(preset.id);
     try {
       const buffer = await generateBGM(preset.prompt, 5);
-      const blob = new Blob([buffer], { type: 'audio/mpeg' });
+      const audioBytes = decodeBase64ToBytes(buffer.audioBase64);
+      const blob = new Blob([audioBytes as any], { type: buffer.contentType || 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
       setGeneratedSfx(prev => ({ ...prev, [preset.id]: url }));
       // Play immediately

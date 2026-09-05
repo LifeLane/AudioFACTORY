@@ -144,6 +144,11 @@ export async function handleGooglePlayRtdnWebhook(req: Request, res: Response): 
  * Development & Web Sandbox Simulator
  */
 export async function handleSimulatePurchase(req: Request, res: Response): Promise<void> {
+  if (process.env.NODE_ENV === 'production' || process.env.VITE_APP_ENV === 'production') {
+    res.status(403).json({ error: 'PURCHASE_SIMULATION_DISABLED_IN_PRODUCTION', message: 'Purchase simulation is disabled in production.' });
+    return;
+  }
+
   const { plan } = req.body;
   const validPlans: UserPlan[] = ['pro_monthly', 'pro_annual', 'lifetime', 'free', 'guest'];
 

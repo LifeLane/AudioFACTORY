@@ -10,30 +10,20 @@ import { JobService } from '../services/jobService';
 import { ProviderName } from '../providers/AIProvider';
 
 export function extractUserFromRequest(req: Request): GenerationUserContext {
-  const authHeader = req.headers.authorization;
-  const customUserId = req.headers['x-user-id'] as string;
-  const isAnonymousHeader = req.headers['x-is-anonymous'] as string;
-  const customGuestId = req.headers['x-guest-id'] as string;
-
-  let isGuest = isAnonymousHeader === 'true';
-
-  if (customUserId) {
-    if (isAnonymousHeader !== undefined) {
-      isGuest = isAnonymousHeader === 'true';
-    } else {
-      isGuest = customUserId.startsWith('guest_');
-    }
-    return { userId: customUserId, isGuest };
+  if (req.user) {
+    return {
+      userId: req.user.uid,
+      isGuest: req.user.isAnonymous,
+    };
   }
 
+  // Fallback for unauthenticated testing or direct internal calls
+  const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    const resolvedId = token.startsWith('guest_') ? token : `auth_${token.slice(0, 24)}`;
-    return { userId: resolvedId, isGuest: isAnonymousHeader === 'true' || resolvedId.startsWith('guest_') };
-  }
-
-  if (customGuestId) {
-    return { userId: customGuestId, isGuest: true };
+    if (token.startsWith('guest_') || token.length < 50) {
+      return { userId: token, isGuest: true };
+    }
   }
 
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'anonymous_guest';

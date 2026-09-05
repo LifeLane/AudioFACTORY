@@ -1,11 +1,11 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- * AudioFACTORY Secure ElevenLabs Client
- * Calls the backend API endpoints to protect ElevenLabs secrets.
- */
+@license
+* SPDX-License-Identifier: Apache-2.0
+* AudioFACTORY Secure ElevenLabs Client
+* Calls backend API endpoints via apiClient to protect ElevenLabs secrets.
+*/
 import { Voice } from '../types';
-import { getAuthHeaders } from './entitlementService';
+import { apiGet, apiPost } from '../src/lib/apiClient';
 import { useEntitlementStore } from '../src/store/useEntitlementStore';
 
 export const DEFAULT_ELEVENLABS_VOICES: Voice[] = [
@@ -22,21 +22,15 @@ export const DEFAULT_ELEVENLABS_VOICES: Voice[] = [
 ];
 
 export const isElevenLabsKeyAvailable = (): boolean => {
-  return true; // Supported through backend server proxy
+  return true;
 };
 
 export const getElevenLabsVoices = async (): Promise<Voice[]> => {
   try {
-    const response = await fetch('/api/ai/voices', {
-      headers: getAuthHeaders(),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.voices && Array.isArray(data.voices) && data.voices.length > 0) {
-        const elevenLabsOnly = data.voices.filter((v: Voice) => v.provider === 'elevenlabs');
-        if (elevenLabsOnly.length > 0) return elevenLabsOnly;
-      }
+    const data = await apiGet('/ai/voices');
+    if (data && data.voices && Array.isArray(data.voices)) {
+      const elevenLabsOnly = data.voices.filter((v: Voice) => v.provider === 'elevenlabs');
+      if (elevenLabsOnly.length > 0) return elevenLabsOnly;
     }
     return DEFAULT_ELEVENLABS_VOICES;
   } catch (err) {
@@ -49,29 +43,50 @@ export const generateSpeechElevenLabs = async (
   text: string, 
   voiceId: string
 ): Promise<{ buffer: AudioBuffer, rawData: ArrayBuffer }> => {
-  const response = await fetch('/api/ai/elevenlabs/tts', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ text, voiceId }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: 'Speech synthesis failed' }));
-    if (response.status === 429) {
-      useEntitlementStore.getState().setUpgradeModalOpen(true);
-    }
-    throw new Error(err.message || err.error || 'Failed to synthesize ElevenLabs speech.');
-  }
-
-  useEntitlementStore.getState().decrementQuota();
-  const arrayBuffer = await response.arrayBuffer();
-
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const { getAuthHeaders } = await import('../src/lib/apiClient');
+    const headers = await getAuthHeaders();
+    headers['Accept'] = 'audio/mpeg';
+
+    const response = await fetch(`${baseUrl}/api/ai/elevenlabs/tts`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ text, voiceId }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Speech synthesis failed' }));
+      if (response.status === 429) {
+        useEntitlementStore.getState().setUpgradeModalOpen(true);
+      }
+      throw new Error(err.message || err.error || 'Failed to synthesize ElevenLabs speech.');
+    }
+
+    useEntitlementStore.getState().decrementQuota();
+    const arrayBuffer = await response.arrayBuffer();
+
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
     return { buffer: audioBuffer, rawData: arrayBuffer };
-  } finally {
-    // Audio buffer remains valid in browser memory
+  } catch (error: any) {
+    if (error.status === 429 || error.statusCode === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw error;
+  }
+};
+
+export const generateBGM = async (prompt: string, durationSeconds: number = 30): Promise<{ audioBase64: string; contentType: string }> => {
+  try {
+    const data = await apiPost('/ai/generate-bgm', { prompt, durationSeconds });
+    useEntitlementStore.getState().decrementQuota();
+    return data;
+  } catch (error: any) {
+    if (error.status === 429 || error.statusCode === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw error;
   }
 };
 
@@ -84,48 +99,19 @@ export const cloneVoice = async (name: string, description: string, audioBlob: B
   }
   const base64 = btoa(binary);
 
-  const response = await fetch('/api/ai/clone-voice', {
-    method: 'POST',
-    headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  try {
+    const data = await apiPost('/ai/clone-voice', {
       name,
       description,
       audioBase64: base64,
       mimeType: audioBlob.type || 'audio/webm',
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: 'Voice cloning failed' }));
-    if (response.status === 429) {
+    });
+    useEntitlementStore.getState().decrementQuota();
+    return data;
+  } catch (error: any) {
+    if (error.status === 429 || error.statusCode === 429) {
       useEntitlementStore.getState().setUpgradeModalOpen(true);
     }
-    throw new Error(err.message || err.error || 'Failed to clone voice.');
+    throw error;
   }
-
-  useEntitlementStore.getState().decrementQuota();
-  const data = await response.json();
-  return data.voice || data;
-};
-
-export const generateBGM = async (prompt: string, duration: number = 10): Promise<ArrayBuffer> => {
-  const response = await fetch('/api/ai/generate-bgm', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ prompt, duration }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: 'BGM generation failed' }));
-    if (response.status === 429) {
-      useEntitlementStore.getState().setUpgradeModalOpen(true);
-    }
-    throw new Error(err.message || err.error || 'Failed to generate BGM soundtrack.');
-  }
-
-  useEntitlementStore.getState().decrementQuota();
-  return response.arrayBuffer();
 };

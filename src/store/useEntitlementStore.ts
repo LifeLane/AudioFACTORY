@@ -67,15 +67,15 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
         set({ 
           entitlement: result.entitlement, 
           isLoading: false, 
-          billingMessage: result.message || 'Purchase successful! Entitlement updated.' 
+          billingMessage: 'Purchase successful! Entitlement updated.' 
         });
-        return { success: true, message: result.message };
+        return { success: true, message: 'Purchase successful! Entitlement updated.' };
       } else {
         set({ 
           isLoading: false, 
-          billingMessage: result.message || 'Purchase could not be verified.' 
+          billingMessage: 'Purchase could not be verified.' 
         });
-        return { success: false, message: result.message };
+        return { success: false, message: 'Purchase could not be verified.' };
       }
     } catch (err: any) {
       const msg = err.message || 'Purchase transaction failed';
@@ -92,11 +92,11 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
         set({ 
           entitlement: result.entitlement, 
           isRestoring: false, 
-          billingMessage: result.message || 'Purchases restored.' 
+          billingMessage: 'Purchases restored.' 
         });
         return result;
       }
-      set({ isRestoring: false, billingMessage: result.message || 'No purchases restored.' });
+      set({ isRestoring: false, billingMessage: 'No purchases restored.' });
       return result;
     } catch (err: any) {
       const msg = err.message || 'Failed to restore purchases.';
@@ -106,16 +106,15 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
   },
 
   manageSubscription: () => {
-    const current = get().entitlement;
-    openGooglePlaySubscriptionManagement(current.productId);
+    openGooglePlaySubscriptionManagement();
   },
 
   applyPlan: async (plan, user) => {
     set({ isLoading: true });
     try {
-      const result = await upgradePlan(plan, user);
-      if (result.success && result.entitlement) {
-        set({ entitlement: result.entitlement, isLoading: false });
+      const entitlement = await upgradePlan(plan, user);
+      if (entitlement) {
+        set({ entitlement, isLoading: false });
         return true;
       }
     } catch (err) {
@@ -128,7 +127,7 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
   applyPlayPurchase: async (productId, token, user) => {
     set({ isLoading: true });
     try {
-      const result = await verifyPlayPurchase(productId, token, user);
+      const result = await verifyPlayPurchase(productId, token);
       if (result.success && result.entitlement) {
         set({ entitlement: result.entitlement, isLoading: false });
         return true;

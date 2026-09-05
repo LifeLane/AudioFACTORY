@@ -1,11 +1,10 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- * AudioFACTORY Single Authoritative Backend Entitlement Resolver
- * All AI generation authorization and access control across the backend MUST query this resolver.
- */
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { serverDb, getTodayUtcDateString } from '../usageManager';
+@license
+* SPDX-License-Identifier: Apache-2.0
+* AudioFACTORY Single Authoritative Backend Entitlement Resolver (Firebase Admin SDK)
+*/
+import { adminDb } from '../firebaseAdmin';
+import { getTodayUtcDateString } from '../usageManager';
 import { 
   Entitlement, 
   UserPlan, 
@@ -13,14 +12,13 @@ import {
   EntitlementSource, 
   FeatureEntitlement 
 } from '../../shared/types';
-import { PLANS, resolveEntitlement as buildEntitlementObject, isPaidPlan, BASE_FREE_FEATURES, BASE_GUEST_FEATURES } from '../../shared/plans';
+import { PLANS, resolveEntitlement as buildEntitlementObject } from '../../shared/plans';
 
 interface CachedEntitlementEntry {
   entitlement: Entitlement;
   fetchedAt: number;
 }
 
-// In-memory hot cache for high-throughput generation checks (TTL: 10 seconds)
 const entitlementCache = new Map<string, CachedEntitlementEntry>();
 const CACHE_TTL_MS = 10000;
 
@@ -28,11 +26,6 @@ export function invalidateEntitlementCache(userId: string): void {
   entitlementCache.delete(userId);
 }
 
-/**
- * Single Authoritative Entitlement Resolver
- * Evaluates subscription lifecycle (active, cancelled, expired, paused, grace_period, account_hold, revoked, refunded)
- * and returns the authoritative Entitlement object including daily quota, remaining quota, and feature flags.
- */
 export async function resolveEntitlement(
   userId: string,
   isGuest: boolean = false
@@ -41,7 +34,6 @@ export async function resolveEntitlement(
   const nowIso = now.toISOString();
   const today = getTodayUtcDateString();
 
-  // Guest / Anonymous fallback
   if (isGuest || !userId || userId.startsWith('guest_')) {
     const guestUsage = await getDailyUsageCount(userId || 'guest_anonymous', today);
     return buildEntitlementObject('guest', guestUsage, null, null, {
@@ -51,12 +43,9 @@ export async function resolveEntitlement(
     });
   }
 
-  // Check in-memory hot cache
   const cached = entitlementCache.get(userId);
   if (cached && (Date.now() - cached.fetchedAt < CACHE_TTL_MS)) {
-    // If cache entry has an expiration date, verify it hasn't passed
     if (!cached.entitlement.expiresAt || new Date(cached.entitlement.expiresAt) > now) {
-      // Refresh current daily usage count to return accurate remaining quota
       const usageCount = await getDailyUsageCount(userId, today);
       const isUnlimited = cached.entitlement.dailyQuota === -1;
       const remainingQuota = isUnlimited ? -1 : Math.max(0, cached.entitlement.dailyQuota - usageCount);
@@ -67,7 +56,7 @@ export async function resolveEntitlement(
     }
   }
 
-  const entitlementDocRef = doc(serverDb, 'users', userId, 'entitlements', 'current');
+  const entitlementDocRef = adminDb.collection('users').doc(userId).collection('entitlements').doc('current');
   let planId: UserPlan = 'free';
   let status: SubscriptionLifecycleStatus = 'active';
   let source: EntitlementSource = 'web';
@@ -80,9 +69,9 @@ export async function resolveEntitlement(
   let updatedAt: string = nowIso;
 
   try {
-    const snap = await getDoc(entitlementDocRef);
-    if (snap.exists()) {
-      const data = snap.data();
+    const snap = await entitlementDocRef.get();
+    if (snap.exists) {
+      const data = snap.data() || {};
       const rawPlanId = data.planId as UserPlan;
       const rawStatus = (data.status as SubscriptionLifecycleStatus) || 'active';
       source = (data.source as EntitlementSource) || 'google_play';
@@ -94,7 +83,6 @@ export async function resolveEntitlement(
       purchaseTokenHash = data.purchaseTokenHash || null;
       updatedAt = data.updatedAt || nowIso;
 
-      // Lifecycle Evaluation
       if (rawPlanId === 'lifetime') {
         if (rawStatus === 'refunded' || rawStatus === 'revoked') {
           planId = 'free';
@@ -113,39 +101,32 @@ export async function resolveEntitlement(
             if (isPastExpiry) {
               planId = 'free';
               status = 'expired';
-              // Trigger background status update to Firestore
-              updateDoc(entitlementDocRef, { status: 'expired', updatedAt: nowIso }).catch(() => {});
+              entitlementDocRef.set({ status: 'expired', updatedAt: nowIso }, { merge: true }).catch(() => {});
             } else {
               planId = rawPlanId;
               status = 'active';
             }
             break;
-
           case 'grace_period':
-            // Google Play grace period grants access while billing retry occurs
             planId = rawPlanId;
             status = 'grace_period';
             break;
-
           case 'cancelled':
             if (isPastExpiry) {
               planId = 'free';
               status = 'expired';
             } else {
-              // Active until current billing period ends
               planId = rawPlanId;
               status = 'cancelled';
               autoRenewing = false;
             }
             break;
-
           case 'paused':
           case 'account_hold':
           case 'expired':
           case 'revoked':
           case 'refunded':
           default:
-            // Premium access suspended
             planId = 'free';
             status = rawStatus;
             break;
@@ -156,7 +137,7 @@ export async function resolveEntitlement(
       }
     }
   } catch (err) {
-    console.warn(`[ENTITLEMENT_RESOLVER] Failed reading Firestore entitlement for ${userId}:`, err);
+    console.warn(`[ENTITLEMENT RESOLVER ADMIN] Failed reading Firestore entitlement for ${userId}:`, err);
     planId = 'free';
     status = 'active';
   }
@@ -172,7 +153,6 @@ export async function resolveEntitlement(
     updatedAt,
   });
 
-  // Cache resolved entitlement
   entitlementCache.set(userId, {
     entitlement: resolved,
     fetchedAt: Date.now(),
@@ -181,15 +161,13 @@ export async function resolveEntitlement(
   return resolved;
 }
 
-/**
- * Helper to fetch generation usage count for today
- */
 async function getDailyUsageCount(userId: string, today: string): Promise<number> {
   try {
-    const usageDocRef = doc(serverDb, 'users', userId, 'usage', today);
-    const snap = await getDoc(usageDocRef);
-    if (snap.exists()) {
-      return Number(snap.data().generationCount || 0);
+    const usageDocRef = adminDb.collection('users').doc(userId).collection('usage').doc(today);
+    const snap = await usageDocRef.get();
+    if (snap.exists) {
+      const data = snap.data() || {};
+      return Number(data.generationCount || 0);
     }
   } catch (err) {
     // Non-blocking usage fallback
@@ -197,9 +175,6 @@ async function getDailyUsageCount(userId: string, today: string): Promise<number
   return 0;
 }
 
-/**
- * Saves authoritative entitlement directly to Firestore `users/{uid}/entitlements/current`
- */
 export async function saveUserEntitlement(
   userId: string,
   data: {
@@ -216,7 +191,7 @@ export async function saveUserEntitlement(
   }
 ): Promise<Entitlement> {
   const nowIso = new Date().toISOString();
-  const entitlementDocRef = doc(serverDb, 'users', userId, 'entitlements', 'current');
+  const entitlementDocRef = adminDb.collection('users').doc(userId).collection('entitlements').doc('current');
   const planConfig = PLANS[data.planId] || PLANS.free;
 
   const docPayload = {
@@ -233,9 +208,7 @@ export async function saveUserEntitlement(
     updatedAt: nowIso,
   };
 
-  await setDoc(entitlementDocRef, docPayload, { merge: true });
-
-  // Invalidate cache immediately so new entitlement is available
+  await entitlementDocRef.set(docPayload, { merge: true });
   invalidateEntitlementCache(userId);
 
   return resolveEntitlement(userId, false);

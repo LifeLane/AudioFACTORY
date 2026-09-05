@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Music, Loader2, Sparkles, Play, Pause, Volume2, CheckCircle2 } from 'lucide-react';
 import { generateBGM } from '../services/elevenLabsService';
+import { decodeBase64ToBytes } from '../services/geminiService';
 
 interface BgmGeneratorProps {
   onBgmGenerated: (audioBuffer: ArrayBuffer) => void;
@@ -25,11 +26,12 @@ export const BgmGenerator: React.FC<BgmGeneratorProps> = ({ onBgmGenerated }) =>
     setIsGenerating(true);
     setError(null);
     try {
-      const buffer = await generateBGM(prompt, duration);
+      const result = await generateBGM(prompt, duration);
+      const audioBytes = decodeBase64ToBytes(result.audioBase64);
       // Create preview url
-      const blob = new Blob([buffer], { type: 'audio/mpeg' });
+      const blob = new Blob([audioBytes as any], { type: result.contentType || 'audio/mpeg' });
       setLastGeneratedUrl(URL.createObjectURL(blob));
-      onBgmGenerated(buffer);
+      onBgmGenerated(audioBytes.buffer as ArrayBuffer);
     } catch (err: any) {
       setError(err.message || "Failed to generate BGM. Please verify your ElevenLabs API key.");
     } finally {
