@@ -20,13 +20,8 @@ import { TermsPage } from './src/website/pages/TermsPage';
 import { RefundPolicyPage } from './src/website/pages/RefundPolicyPage';
 import { AccountDeletionPage } from './src/website/pages/AccountDeletionPage';
 import { StudioApp } from './src/studio/StudioApp';
-import { initializeRevenueCat } from './services/revenueCatService';
 
 export const App: React.FC = () => {
-  React.useEffect(() => {
-    initializeRevenueCat();
-  }, []);
-
   return (
     <BrowserRouter>
       <Routes>

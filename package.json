@@ -30,8 +30,6 @@
     "lucide-react": "^0.577.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-native-purchases": "^10.9.0",
-    "react-native-purchases-ui": "^10.9.0",
     "react-router-dom": "^7.13.1",
     "tailwind-merge": "^3.5.0",
     "tsx": "^4.23.13",
@@ -49,9 +47,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@types/react-native": "^0.73.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "react-native": "^0.87.1",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.5.3",
     "vite": "^5.3.3"
