@@ -115,6 +115,11 @@ export function isPaidPlan(plan: UserPlan): boolean {
   return plan === 'pro_monthly' || plan === 'pro_annual' || plan === 'lifetime';
 }
 
+export function getDailyQuotaForPlan(plan: UserPlan): number {
+  const cfg = PLANS[plan] || PLANS.guest;
+  return cfg.dailyGenerations;
+}
+
 /**
  * Resolves an Entitlement object given a plan, current usage count, and expiration date.
  */
