@@ -1,7 +1,13 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ * AudioFACTORY Client-Side Firebase Service
+ */
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   signInWithPopup, 
+  linkWithPopup,
   GoogleAuthProvider, 
   signInAnonymously as firebaseSignInAnonymously, 
   signOut as firebaseSignOut,
@@ -14,14 +20,13 @@ import {
   doc, 
   setDoc, 
   deleteDoc, 
-  getDocs, 
   onSnapshot, 
   getDocFromServer,
   query,
   orderBy 
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import { SavedAudioProject, SavedMonologue, ProjectInput, MonologueInput } from '../types';
+import { SavedAudioProject, SavedMonologue, ProjectInput, MonologueInput, UsageRecord } from '../types';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -82,7 +87,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
  */
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
-    // Attempt to test server reachability
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error: any) {
@@ -97,22 +101,48 @@ export async function testFirestoreConnection(): Promise<boolean> {
       console.warn("Firestore connection check: Operating in offline / local cache mode until server connection is established.");
       return false;
     }
-    // Expected to get a permission-denied or not-found on 'test/connection' when rules are restrictive and backend is healthy
     return true;
   }
 }
 
 /**
- * Google Sign In with Popup
+ * Google Sign In with Account Linking
+ * Upgrades anonymous guest account to Google without changing UID whenever possible!
  */
-export async function signInWithGoogle(): Promise<User> {
+export async function linkOrSignInWithGoogle(): Promise<{ user: User; linked: boolean }> {
   const provider = new GoogleAuthProvider();
+  const currentUser = auth.currentUser;
+
+  // If user is currently an anonymous guest, link the account
+  if (currentUser && currentUser.isAnonymous) {
+    try {
+      const result = await linkWithPopup(currentUser, provider);
+      return { user: result.user, linked: true };
+    } catch (err: any) {
+      // If the Google account is already linked to another user, sign in to that account
+      if (err.code === 'auth/credential-already-in-use' || err.code === 'auth/email-already-in-use') {
+        const credential = await signInWithPopup(auth, provider);
+        return { user: credential.user, linked: false };
+      }
+      throw err;
+    }
+  }
+
+  // Otherwise, standard Google sign in
   const credential = await signInWithPopup(auth, provider);
-  return credential.user;
+  return { user: credential.user, linked: false };
 }
 
 /**
- * Anonymous Sign In for instant access without credentials
+ * Direct Google Sign In with Popup
+ */
+export async function signInWithGoogle(): Promise<User> {
+  const result = await linkOrSignInWithGoogle();
+  return result.user;
+}
+
+/**
+ * Explicit Anonymous Sign In for Guest Mode
  */
 export async function signInAnonymously(): Promise<User> {
   const credential = await firebaseSignInAnonymously(auth);
@@ -140,13 +170,12 @@ export async function saveAudioProject(
   projectData: ProjectInput
 ): Promise<string> {
   const user = auth.currentUser;
-  if (!user) throw new Error("Authentication required to save projects.");
+  if (!user) throw new Error("Authentication session required to save projects.");
 
   const projectId = projectData.id && projectData.id.trim() ? projectData.id : `proj_${Date.now()}`;
   const now = new Date().toISOString();
   const path = `users/${user.uid}/projects/${projectId}`;
 
-  // Strip transient audio buffers / binary data before storing in Firestore
   const cleanLines = (projectData.lines || []).map(line => ({
     id: line.id,
     speaker: line.speaker,
@@ -235,7 +264,7 @@ export async function saveMonologue(
   monologueData: MonologueInput
 ): Promise<string> {
   const user = auth.currentUser;
-  if (!user) throw new Error("Authentication required.");
+  if (!user) throw new Error("Authentication session required.");
 
   const monoId = monologueData.id && monologueData.id.trim() ? monologueData.id : `mono_${Date.now()}`;
   const now = new Date().toISOString();
@@ -301,4 +330,38 @@ export async function deleteMonologue(monologueId: string): Promise<void> {
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
+}
+
+/**
+ * Real-time listener for today's user usage record (read-only for clients)
+ */
+export function subscribeToDailyUsage(callback: (usage: UsageRecord | null) => void): () => void {
+  const user = auth.currentUser;
+  if (!user) {
+    callback(null);
+    return () => {};
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const docRef = doc(db, `users/${user.uid}/usage/${today}`);
+
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as UsageRecord);
+      } else {
+        callback({
+          userId: user.uid,
+          date: today,
+          generationCount: 0,
+          characterCount: 0,
+          lastGeneratedAt: new Date().toISOString(),
+        });
+      }
+    },
+    (error) => {
+      console.warn("Usage snapshot warning:", error);
+    }
+  );
 }

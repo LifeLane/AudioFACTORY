@@ -10,9 +10,14 @@ import {
   Settings, 
   Volume2, 
   Monitor,
-  LayoutGrid
+  LayoutGrid,
+  Crown,
+  Globe
 } from 'lucide-react';
 import { useTerminal } from './TerminalContext';
+import { GenerationQuotaBadge } from '../GenerationQuotaBadge';
+import { useEntitlementStore } from '../../src/store/useEntitlementStore';
+import { PLANS } from '../../shared/plans';
 
 interface TerminalHeaderProps {
   activeMode: 'intro' | 'multispeaker' | 'suite';
@@ -108,6 +113,20 @@ export const TerminalHeader: React.FC<TerminalHeaderProps> = ({
 
         {/* Right: Theme Toggle & Cloud Vault & Voice Settings */}
         <div className="flex items-center gap-2">
+          {/* Plan & Daily Quota Status */}
+          <GenerationQuotaBadge />
+
+          {/* Marketing Website Link */}
+          <a
+            href="/website"
+            target="_blank"
+            rel="noreferrer"
+            className="p-1.5 rounded-lg border border-[#30363D] bg-[#161B22] hover:bg-[#21262D] text-[#8B949E] hover:text-[#E6EDF3] transition-colors hidden sm:flex items-center gap-1 text-xs font-mono"
+            title="Open AudioFACTORY Marketing Website"
+          >
+            <Globe className="w-3.5 h-3.5 text-sky-400" />
+          </a>
+
           {/* Theme Toggle Button (G-TERM vs BAUHAUS) */}
           <button
             onClick={onToggleTheme}

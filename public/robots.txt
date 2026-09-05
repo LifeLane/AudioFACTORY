@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/projects
+
+Sitemap: https://audiofactory.app/sitemap.xml

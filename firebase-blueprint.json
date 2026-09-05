@@ -46,6 +46,82 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "updatedAt"]
+    },
+    "userDailyUsage": {
+      "title": "User Daily Usage",
+      "description": "Server-authoritative daily generation tracking and quota counters",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "maxLength": 10, "description": "Date formatted as YYYY-MM-DD (UTC)" },
+        "generationCount": { "type": "number", "description": "Total generation requests attempted" },
+        "successfulGenerations": { "type": "number", "description": "Successfully completed generations" },
+        "failedGenerations": { "type": "number", "description": "Failed generation attempts" },
+        "planId": { "type": "string", "maxLength": 50, "description": "Plan identifier active during generation" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "generationCount", "successfulGenerations", "failedGenerations", "planId", "updatedAt"]
+    },
+    "generationJob": {
+      "title": "Generation Job",
+      "description": "Structured record of an AI generation job execution",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string", "maxLength": 100, "description": "Unique job identifier" },
+        "uid": { "type": "string", "maxLength": 128, "description": "User UID" },
+        "type": { "type": "string", "enum": ["speech", "script", "dialogue", "bgm", "voice_clone", "dramatize", "analyze"] },
+        "provider": { "type": "string", "enum": ["gemini", "elevenlabs"] },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "errorCode": { "type": "string" },
+        "duration": { "type": "number", "description": "Execution duration in milliseconds" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["jobId", "uid", "type", "provider", "status", "createdAt", "startedAt"]
+    },
+    "userEntitlement": {
+      "title": "User Entitlement",
+      "description": "Authoritative current plan and subscription lifecycle entitlement record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "description": "User UID" },
+        "planId": { "type": "string", "enum": ["guest", "free", "pro_monthly", "pro_annual", "lifetime"] },
+        "status": { "type": "string", "enum": ["active", "cancelled", "expired", "paused", "grace_period", "account_hold", "revoked", "refunded"] },
+        "source": { "type": "string", "enum": ["google_play", "web", "admin", "system"] },
+        "productId": { "type": "string", "maxLength": 100 },
+        "purchaseTokenHash": { "type": "string", "maxLength": 256 },
+        "orderId": { "type": "string", "maxLength": 100 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "autoRenewing": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "planId", "status", "source", "updatedAt"]
+    },
+    "userPurchase": {
+      "title": "User Purchase Record",
+      "description": "Historical audit and reconciliation record for store transactions",
+      "type": "object",
+      "properties": {
+        "purchaseId": { "type": "string", "maxLength": 128, "description": "Unique purchase or order identifier" },
+        "uid": { "type": "string", "maxLength": 128, "description": "User UID" },
+        "productId": { "type": "string", "maxLength": 100 },
+        "productType": { "type": "string", "enum": ["subs", "inapp"] },
+        "planId": { "type": "string", "maxLength": 50 },
+        "platform": { "type": "string", "enum": ["google_play", "web"] },
+        "status": { "type": "string", "enum": ["active", "cancelled", "expired", "paused", "grace_period", "account_hold", "revoked", "refunded"] },
+        "orderId": { "type": "string", "maxLength": 100 },
+        "purchaseTokenHash": { "type": "string", "maxLength": 256 },
+        "purchaseTime": { "type": "string", "format": "date-time" },
+        "expirationTime": { "type": "string", "format": "date-time" },
+        "autoRenewing": { "type": "boolean" },
+        "priceCurrencyCode": { "type": "string", "maxLength": 10 },
+        "priceAmountMicros": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["purchaseId", "uid", "productId", "platform", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -60,6 +136,22 @@
     "/users/{userId}/profile/main": {
       "schema": "userProfile",
       "description": "User profile and studio preferences"
+    },
+    "/users/{userId}/usage/{dateId}": {
+      "schema": "userDailyUsage",
+      "description": "User daily generation usage and quota status (read-only for clients, written by trusted backend)"
+    },
+    "/users/{userId}/generationJobs/{jobId}": {
+      "schema": "generationJob",
+      "description": "Structured AI generation job audit and execution history"
+    },
+    "/users/{userId}/entitlements/current": {
+      "schema": "userEntitlement",
+      "description": "Authoritative user active subscription and plan entitlement (read-only for clients, written by trusted backend)"
+    },
+    "/users/{userId}/purchases/{purchaseId}": {
+      "schema": "userPurchase",
+      "description": "Audit and reconciliation purchase logs (read-only for clients, written by trusted backend)"
     }
   }
 }

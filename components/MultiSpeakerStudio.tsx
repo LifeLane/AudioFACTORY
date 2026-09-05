@@ -42,6 +42,7 @@ import { BauhausButton } from './BauhausComponents';
 import { useFirebase } from '../services/firebaseContext';
 import { useLiveblocks } from '../services/liveblocksContext';
 import { LivePresenceBar } from './LivePresenceBar';
+import { QuotaExhaustedBanner } from './QuotaExhaustedBanner';
 
 interface MultiSpeakerStudioProps {
   onBgmOverlay?: (buffer: AudioBuffer) => void;
@@ -308,7 +309,7 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
           buffer = res.buffer;
           const wavBlob = audioBufferToWavBlob(buffer);
           audioUrl = URL.createObjectURL(wavBlob);
-          setErrorMessage(`VITE_ELEVENLABS_API_KEY was not found, so we generated this voice using Gemini's ${fallbackVoice} neural voice.`);
+          setErrorMessage(`ElevenLabs service is not active on server, so we generated this voice using Gemini's ${fallbackVoice} neural voice.`);
         } else {
           const res = await generateSpeechElevenLabs(line.text, speaker.voice);
           buffer = res.buffer;
@@ -715,6 +716,11 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
       {/* Liveblocks Collaborative Room Presence Bar */}
       <div className="px-3 sm:px-6 py-1.5 bg-zinc-100 border-b border-zinc-200 flex-shrink-0">
         <LivePresenceBar />
+      </div>
+
+      {/* Quota Exhaustion & Upgrade Prompt */}
+      <div className="px-3 sm:px-6">
+        <QuotaExhaustedBanner actionName="scene generation" />
       </div>
 
       {/* MOBILE SEGMENTED CONTROL TABS (< md) */}

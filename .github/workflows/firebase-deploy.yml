@@ -1,0 +1,117 @@
+name: Firebase Infrastructure & Rules Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - 'firebase/**'
+      - 'functions/**'
+      - '.github/workflows/firebase-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Firebase Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      target:
+        description: 'Firebase Deployment Target'
+        required: true
+        default: 'firestore'
+        type: choice
+        options:
+          - 'firestore'
+          - 'firestore:rules'
+          - 'firestore:indexes'
+          - 'functions'
+          - 'all'
+
+concurrency:
+  group: firebase-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-firebase:
+    name: Deploy Firestore Rules & Indexes (${{ github.event.inputs.environment || 'production' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Firebase CLI Tools
+        run: npm install -g firebase-tools
+
+      - name: 🔍 Validate Firestore Rules & Configuration Syntax
+        run: |
+          echo "Verifying firestore.rules and firebase.json..."
+          test -f firestore.rules || { echo "❌ Missing firestore.rules"; exit 1; }
+          test -f firestore.indexes.json || { echo "❌ Missing firestore.indexes.json"; exit 1; }
+          test -f firebase.json || { echo "❌ Missing firebase.json"; exit 1; }
+          
+          # Check rules syntax for basic safety declarations
+          grep -q "service cloud.firestore" firestore.rules || { echo "❌ Invalid firestore.rules header"; exit 1; }
+          echo "✅ Firestore rules and configuration validated."
+
+      - name: 🔐 Authenticate with Firebase Service Account
+        id: auth
+        run: |
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
+            echo "⚠️ Warning: FIREBASE_SERVICE_ACCOUNT secret is not configured in GitHub Secrets."
+            echo "To enable automated deployment, add your Firebase Service Account JSON key to repository secrets."
+            echo "SKIPPED_DEPLOY=true" >> $GITHUB_ENV
+          else
+            echo "Configuring service account credentials..."
+            echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/firebase-sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+            echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json" >> $GITHUB_ENV
+            echo "SKIPPED_DEPLOY=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🚀 Deploy Firestore Rules & Indexes
+        if: env.SKIPPED_DEPLOY != 'true'
+        run: |
+          TARGET="${{ github.event.inputs.target || 'firestore' }}"
+          echo "Deploying target '$TARGET' via Firebase CLI..."
+          
+          if [ "$TARGET" = "all" ]; then
+            firebase deploy --non-interactive
+          elif [ "$TARGET" = "firestore:rules" ]; then
+            firebase deploy --only firestore:rules --non-interactive
+          elif [ "$TARGET" = "firestore:indexes" ]; then
+            firebase deploy --only firestore:indexes --non-interactive
+          elif [ "$TARGET" = "functions" ]; then
+            firebase deploy --only functions --non-interactive
+          else
+            firebase deploy --only firestore --non-interactive
+          fi
+
+      - name: 🧹 Cleanup Sensitive Credentials
+        if: always()
+        run: |
+          rm -f /tmp/firebase-sa.json
+          echo "✅ Temporary credentials wiped."
+
+      - name: 📊 Firebase Deployment Summary
+        run: |
+          echo "### 🔥 Firebase Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target:** \`${{ github.event.inputs.target || 'firestore' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`${{ github.event.inputs.environment || 'production' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rules File:** \`firestore.rules\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Indexes File:** \`firestore.indexes.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY

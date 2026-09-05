@@ -1,0 +1,153 @@
+name: Android Build & Artifact Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Build Environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      build_target:
+        description: 'Build Target'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - 'both'
+          - 'aab'
+          - 'apk'
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    name: Build Android Packages (${{ github.event.inputs.environment || 'development' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: ☕ Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📦 Install Node Dependencies
+        run: npm ci
+
+      - name: 🏗️ Compile Web Assets
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_APP_ENV: ${{ github.event.inputs.environment || 'development' }}
+
+      - name: 🔄 Sync Capacitor Android Platform
+        run: npx cap sync android
+
+      - name: 🔐 Configure Release Keystore (If Configured in Secrets)
+        id: setup_keystore
+        run: |
+          mkdir -p android/keystores
+          if [ -n "${{ secrets.ANDROID_KEYSTORE }}" ]; then
+            echo "Decoding release keystore from GitHub Secrets..."
+            echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > android/keystores/release.jks
+            echo "KEYSTORE_CONFIGURED=true" >> $GITHUB_ENV
+            echo "KEYSTORE_PATH=$(pwd)/android/keystores/release.jks" >> $GITHUB_ENV
+            echo "AUDIOFACTORY_KEYSTORE_PATH=$(pwd)/android/keystores/release.jks" >> $GITHUB_ENV
+          else
+            echo "ℹ️ ANDROID_KEYSTORE secret not set. Building with standard fallback signing."
+            echo "KEYSTORE_CONFIGURED=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🔨 Make Gradlew Executable
+        working-directory: ./android
+        run: chmod +x ./gradlew
+
+      - name: 🚀 Build Android Debug APK
+        if: ${{ github.event.inputs.build_target != 'aab' }}
+        working-directory: ./android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: 📦 Build Android Release App Bundle (AAB)
+        if: ${{ github.event.inputs.build_target != 'apk' }}
+        working-directory: ./android
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          AUDIOFACTORY_KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          AUDIOFACTORY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          AUDIOFACTORY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          AUDIOFACTORY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --stacktrace
+
+      - name: 📱 Build Android Release APK
+        if: ${{ github.event.inputs.build_target != 'aab' }}
+        working-directory: ./android
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          AUDIOFACTORY_KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          AUDIOFACTORY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          AUDIOFACTORY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          AUDIOFACTORY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: 🧹 Secure Keystore Cleanup
+        if: always()
+        run: |
+          rm -f android/keystores/release.jks
+          echo "✅ Keystore cleaned up from runner filesystem."
+
+      - name: 📤 Upload Release AAB Bundle Artifact
+        if: ${{ github.event.inputs.build_target != 'apk' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 📤 Upload Release APK Artifact
+        if: ${{ github.event.inputs.build_target != 'aab' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 📤 Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,23 +1,30 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ * AudioFACTORY Firebase Authentication & Data Context
+ */
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from 'firebase/auth';
 import { 
   auth,
-  signInWithGoogle, 
+  linkOrSignInWithGoogle, 
   signInAnonymously, 
   signOutUser, 
   subscribeToAuth, 
   subscribeToUserProjects,
   subscribeToUserMonologues,
+  subscribeToDailyUsage,
   saveAudioProject,
   deleteAudioProject,
   saveMonologue,
   deleteMonologue,
   testFirestoreConnection
 } from './firebaseService';
-import { SavedAudioProject, SavedMonologue, ProjectInput, MonologueInput } from '../types';
+import { SavedAudioProject, SavedMonologue, ProjectInput, MonologueInput, UsageRecord } from '../types';
 
 interface FirebaseContextType {
   user: User | null;
+  isGuest: boolean;
   authLoading: boolean;
   isOnline: boolean;
   loginGoogle: () => Promise<void>;
@@ -25,6 +32,7 @@ interface FirebaseContextType {
   logout: () => Promise<void>;
   savedProjects: SavedAudioProject[];
   savedMonologues: SavedMonologue[];
+  liveUsage: UsageRecord | null;
   saveProjectToCloud: (project: ProjectInput) => Promise<string>;
   removeProjectFromCloud: (id: string) => Promise<void>;
   saveMonologueToCloud: (monologue: MonologueInput) => Promise<string>;
@@ -32,6 +40,7 @@ interface FirebaseContextType {
   isSaving: boolean;
   statusMessage: { text: string; type: 'success' | 'error' | 'info' } | null;
   clearStatusMessage: () => void;
+  deleteAccountData: () => Promise<void>;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | null>(null);
@@ -42,30 +51,64 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [savedProjects, setSavedProjects] = useState<SavedAudioProject[]>([]);
   const [savedMonologues, setSavedMonologues] = useState<SavedMonologue[]>([]);
+  const [liveUsage, setLiveUsage] = useState<UsageRecord | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Validate Firestore connection on boot
+  // 1. Test Firestore connectivity
   useEffect(() => {
     testFirestoreConnection().then(online => {
       setIsOnline(online);
     });
   }, []);
 
-  // Listen to Auth State
+  // 2. Explicit Session Initialization on Boot:
+  // - Restore existing Firebase session (Google or Anonymous)
+  // - If no session exists, establish guest mode via signInAnonymously()
   useEffect(() => {
-    const unsubscribe = subscribeToAuth((currentUser) => {
-      setUser(currentUser);
-      setAuthLoading(false);
+    let isMounted = true;
+    let initialized = false;
+
+    const unsubscribe = subscribeToAuth(async (currentUser) => {
+      if (!isMounted) return;
+
+      if (currentUser) {
+        setUser(currentUser);
+        setAuthLoading(false);
+        initialized = true;
+      } else if (!initialized) {
+        // First boot with no active session -> establish guest session
+        try {
+          const guest = await signInAnonymously();
+          if (isMounted) {
+            setUser(guest);
+          }
+        } catch (err) {
+          console.warn("Could not establish anonymous guest session:", err);
+        } finally {
+          if (isMounted) {
+            setAuthLoading(false);
+            initialized = true;
+          }
+        }
+      } else {
+        setUser(null);
+        setAuthLoading(false);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
-  // Subscribe to real-time collections when user is authenticated
+  // 3. Real-time subscription to user's projects, monologues, and usage records
   useEffect(() => {
     if (!user) {
       setSavedProjects([]);
       setSavedMonologues([]);
+      setLiveUsage(null);
       return;
     }
 
@@ -77,59 +120,100 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setSavedMonologues(monologues);
     });
 
+    const unsubUsage = subscribeToDailyUsage((usage) => {
+      setLiveUsage(usage);
+    });
+
     return () => {
       unsubProjects();
       unsubMonologues();
+      unsubUsage();
     };
   }, [user]);
 
-  const loginGoogle = async () => {
+  /**
+   * Google Sign In with Account Linking:
+   * Upgrades the current anonymous guest session to Google-authenticated,
+   * keeping the same UID so all existing projects & usage are preserved!
+   */
+  const loginGoogle = useCallback(async () => {
     try {
       setAuthLoading(true);
-      const u = await signInWithGoogle();
-      setStatusMessage({ text: `Welcome, ${u.displayName || u.email || 'Creator'}! Synced with Firebase.`, type: 'success' });
+      const result = await linkOrSignInWithGoogle();
+      setUser(result.user);
+      
+      if (result.linked) {
+        setStatusMessage({ 
+          text: `Success! Linked your Google account (${result.user.email}). All projects & quota upgraded to 10 daily generations!`, 
+          type: 'success' 
+        });
+      } else {
+        setStatusMessage({ 
+          text: `Signed in as ${result.user.displayName || result.user.email || 'Creator'}. Projects and quota synced.`, 
+          type: 'success' 
+        });
+      }
     } catch (err: any) {
       console.error("Google sign in error:", err);
-      setStatusMessage({ text: `Google Sign In failed: ${err.message || 'Please try again'}`, type: 'error' });
+      setStatusMessage({ 
+        text: `Google Sign In failed: ${err.message || 'Please try again'}`, 
+        type: 'error' 
+      });
     } finally {
       setAuthLoading(false);
     }
-  };
+  }, []);
 
-  const loginGuest = async () => {
+  /**
+   * Guest Login explicitly
+   */
+  const loginGuest = useCallback(async () => {
     try {
       setAuthLoading(true);
-      await signInAnonymously();
-      setStatusMessage({ text: 'Signed in as Guest with Cloud Sync enabled!', type: 'success' });
+      const guest = await signInAnonymously();
+      setUser(guest);
+      setStatusMessage({ text: 'Guest session active (3 daily generations).', type: 'info' });
     } catch (err: any) {
       console.error("Guest sign in error:", err);
       setStatusMessage({ text: `Guest sign in failed: ${err.message || 'Please try again'}`, type: 'error' });
     } finally {
       setAuthLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  /**
+   * Sign Out:
+   * Clears state and immediately establishes a fresh guest session
+   */
+  const logout = useCallback(async () => {
     try {
+      setAuthLoading(true);
+      setSavedProjects([]);
+      setSavedMonologues([]);
+      setLiveUsage(null);
       await signOutUser();
-      setStatusMessage({ text: 'Signed out from Firebase.', type: 'info' });
+      
+      // Re-establish guest mode
+      const newGuest = await signInAnonymously();
+      setUser(newGuest);
+      setStatusMessage({ text: 'Signed out. Started a fresh guest session.', type: 'info' });
     } catch (err: any) {
       console.error("Sign out error:", err);
+      setStatusMessage({ text: `Sign out failed: ${err.message}`, type: 'error' });
+    } finally {
+      setAuthLoading(false);
     }
-  };
+  }, []);
 
   const saveProjectToCloud = async (project: ProjectInput): Promise<string> => {
-    // If user is not yet logged in, auto-login as guest so save succeeds immediately
-    let activeUser = user;
-    if (!activeUser) {
-      activeUser = await signInAnonymously();
-      setUser(activeUser);
+    if (!user) {
+      throw new Error("Cannot save: No active authentication session.");
     }
 
     setIsSaving(true);
     try {
       const id = await saveAudioProject(project);
-      setStatusMessage({ text: `Saved "${project.title}" to Firebase Firestore!`, type: 'success' });
+      setStatusMessage({ text: `Saved "${project.title}" to cloud!`, type: 'success' });
       return id;
     } catch (err: any) {
       console.error("Save project error:", err);
@@ -143,7 +227,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const removeProjectFromCloud = async (id: string): Promise<void> => {
     try {
       await deleteAudioProject(id);
-      setStatusMessage({ text: 'Project deleted from Firebase.', type: 'info' });
+      setStatusMessage({ text: 'Project deleted from cloud.', type: 'info' });
     } catch (err: any) {
       console.error("Delete project error:", err);
       setStatusMessage({ text: `Failed to delete: ${err.message}`, type: 'error' });
@@ -152,16 +236,14 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const saveMonologueToCloud = async (monologue: MonologueInput): Promise<string> => {
-    let activeUser = user;
-    if (!activeUser) {
-      activeUser = await signInAnonymously();
-      setUser(activeUser);
+    if (!user) {
+      throw new Error("Cannot save: No active authentication session.");
     }
 
     setIsSaving(true);
     try {
       const id = await saveMonologue(monologue);
-      setStatusMessage({ text: `Saved monologue "${monologue.title}" to Firebase!`, type: 'success' });
+      setStatusMessage({ text: `Saved monologue "${monologue.title}" to cloud!`, type: 'success' });
       return id;
     } catch (err: any) {
       console.error("Save monologue error:", err);
@@ -175,7 +257,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const removeMonologueFromCloud = async (id: string): Promise<void> => {
     try {
       await deleteMonologue(id);
-      setStatusMessage({ text: 'Monologue removed from Firebase.', type: 'info' });
+      setStatusMessage({ text: 'Monologue removed from cloud.', type: 'info' });
     } catch (err: any) {
       console.error("Delete monologue error:", err);
       setStatusMessage({ text: `Failed to delete: ${err.message}`, type: 'error' });
@@ -185,10 +267,39 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const clearStatusMessage = () => setStatusMessage(null);
 
+  const deleteAccountData = async (): Promise<void> => {
+    try {
+      // Clear user local and cloud documents
+      if (user) {
+        for (const p of savedProjects) {
+          try { await deleteAudioProject(p.id); } catch (e) {}
+        }
+        for (const m of savedMonologues) {
+          try { await deleteMonologue(m.id); } catch (e) {}
+        }
+        try {
+          await user.delete();
+        } catch (authErr) {
+          // If requires recent login, sign out
+          await signOutUser();
+        }
+      }
+      setSavedProjects([]);
+      setSavedMonologues([]);
+      setStatusMessage({ text: 'Account data deleted successfully.', type: 'info' });
+    } catch (err: any) {
+      console.error('Error deleting account:', err);
+      throw err;
+    }
+  };
+
+  const isGuest = !user || user.isAnonymous;
+
   return (
     <FirebaseContext.Provider
       value={{
         user,
+        isGuest,
         authLoading,
         isOnline,
         loginGoogle,
@@ -196,6 +307,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         logout,
         savedProjects,
         savedMonologues,
+        liveUsage,
         saveProjectToCloud,
         removeProjectFromCloud,
         saveMonologueToCloud,
@@ -203,6 +315,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isSaving,
         statusMessage,
         clearStatusMessage,
+        deleteAccountData,
       }}
     >
       {children}

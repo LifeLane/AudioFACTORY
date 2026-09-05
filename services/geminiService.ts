@@ -1,15 +1,14 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
-import { GoogleGenAI, Modality } from "@google/genai";
-
-// Initialize Gemini Client
-// Note: We use process.env.API_KEY as per instructions.
-const getClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+ * AudioFACTORY Secure Gemini Client
+ * Delegates all generative AI synthesis calls to the secure backend server.
+ */
+import { getAuthHeaders } from './entitlementService';
+import { useEntitlementStore } from '../src/store/useEntitlementStore';
 
 // Audio Decoding Helper
-function decode(base64: string) {
+function decodeBase64ToBytes(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -25,10 +24,6 @@ async function decodeAudioData(
   sampleRate: number = 24000,
   numChannels: number = 1
 ): Promise<AudioBuffer> {
-  // Simple check for WAV header vs raw PCM.
-  // Gemini TTS usually returns raw PCM, but let's be safe.
-  // If it's raw PCM, we construct the buffer manually.
-  
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
@@ -36,7 +31,6 @@ async function decodeAudioData(
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
     for (let i = 0; i < frameCount; i++) {
-      // Convert Int16 to Float32 [-1.0, 1.0]
       channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
     }
   }
@@ -53,31 +47,18 @@ export function createWavBlob(samples: Uint8Array, sampleRate: number = 24000): 
   const buffer = new ArrayBuffer(44 + samples.length);
   const view = new DataView(buffer);
   
-  // RIFF identifier
   writeString(view, 0, 'RIFF');
-  // RIFF chunk length
   view.setUint32(4, 36 + samples.length, true);
-  // RIFF type
   writeString(view, 8, 'WAVE');
-  // format chunk identifier
   writeString(view, 12, 'fmt ');
-  // format chunk length
   view.setUint32(16, 16, true);
-  // sample format (1 is PCM)
   view.setUint16(20, 1, true);
-  // channel count
   view.setUint16(22, 1, true);
-  // sample rate
   view.setUint32(24, sampleRate, true);
-  // byte rate (sample rate * block align)
   view.setUint32(28, sampleRate * 2, true);
-  // block align (channel count * bytes per sample)
   view.setUint16(32, 2, true);
-  // bits per sample
   view.setUint16(34, 16, true);
-  // data chunk identifier
   writeString(view, 36, 'data');
-  // data chunk length
   view.setUint32(40, samples.length, true);
 
   const dataView = new Uint8Array(buffer, 44);
@@ -91,77 +72,46 @@ export interface GeneratedAudio {
   rawData: Uint8Array;
 }
 
+/**
+ * Server-Proxied Speech Synthesis
+ */
 export const generateSpeech = async (
   text: string, 
   voiceName: string,
   styleInstruction?: string
 ): Promise<GeneratedAudio> => {
-  const ai = getClient();
-  
-  const speakerName = 'Speaker';
-  // Use speaker labeling to distinguish instructions from the text to be spoken.
-  const fullInputText = styleInstruction 
-    ? `${styleInstruction}\n\n${speakerName}: ${text}` 
-    : `${speakerName}: ${text}`;
+  const response = await fetch('/api/ai/tts-gemini', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      text,
+      voiceName,
+      styleInstruction,
+    }),
+  });
 
-  // We need a second speaker to satisfy the API requirement of exactly 2 speakers for multiSpeakerVoiceConfig.
-  // We'll use a dummy speaker that is never invoked in the text.
-  const dummySpeakerName = 'Interactant'; 
-  const dummyVoiceName = 'Puck'; 
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Speech generation failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+      throw new Error(errorData.message || 'Daily generation quota exceeded. Please upgrade to Pro.');
+    }
+    throw new Error(errorData.error || errorData.message || 'Speech generation failed.');
+  }
+
+  const data = await response.json();
+  useEntitlementStore.getState().decrementQuota();
+
+  const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+    sampleRate: data.sampleRate || 24000, 
+  });
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: fullInputText }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          multiSpeakerVoiceConfig: {
-            speakerVoiceConfigs: [
-              {
-                speaker: speakerName,
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: voiceName },
-                }
-              },
-              {
-                speaker: dummySpeakerName,
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: dummyVoiceName },
-                }
-              }
-            ]
-          }
-        },
-      },
-    });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-    if (!base64Audio) {
-      throw new Error("No audio data returned from Gemini.");
-    }
-
-    const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
-      sampleRate: 24000, 
-    });
-
-    try {
-      const audioBytes = decode(base64Audio);
-      const audioBuffer = await decodeAudioData(audioBytes, outputAudioContext, 24000, 1);
-      
-      return { buffer: audioBuffer, rawData: audioBytes };
-    } finally {
-      await outputAudioContext.close();
-    }
-
-  } catch (error) {
-    console.error("Error generating speech:", error);
-    // Log detailed error for diagnostic purposes
-    if (typeof error === 'object' && error !== null) {
-      console.error("Detailed Error Details:", JSON.stringify(error, null, 2));
-    }
-    throw error;
+    const audioBytes = decodeBase64ToBytes(data.audioBase64);
+    const audioBuffer = await decodeAudioData(audioBytes, outputAudioContext, data.sampleRate || 24000, 1);
+    return { buffer: audioBuffer, rawData: audioBytes };
+  } finally {
+    await outputAudioContext.close();
   }
 };
 
@@ -172,26 +122,20 @@ export function audioBufferToWavBlob(audioBuffer: AudioBuffer): Blob {
   const buffer = new ArrayBuffer(44 + length);
   const view = new DataView(buffer);
 
-  // RIFF chunk descriptor
   writeString(view, 0, 'RIFF');
   view.setUint32(4, 36 + length, true);
   writeString(view, 8, 'WAVE');
-
-  // fmt sub-chunk
   writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
-  view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * 2, true); // byte rate
-  view.setUint16(32, numChannels * 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-
-  // data sub-chunk
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true);
   writeString(view, 36, 'data');
   view.setUint32(40, length, true);
 
-  // Write PCM samples
   let offset = 44;
   for (let i = 0; i < audioBuffer.length; i++) {
     for (let channel = 0; channel < numChannels; channel++) {
@@ -233,7 +177,7 @@ export async function stitchAudioBuffers(
     outChannel.set(channelData, currentOffset);
     currentOffset += b.length;
     if (idx < buffers.length - 1) {
-      currentOffset += pauseSamples; // silence
+      currentOffset += pauseSamples;
     }
   });
 
@@ -242,6 +186,9 @@ export async function stitchAudioBuffers(
   return { buffer: stitchedBuffer, wavBlob };
 }
 
+/**
+ * Server-Proxied Script Generation
+ */
 export const generateScript = async (params: {
   topic: string;
   format?: string;
@@ -253,199 +200,113 @@ export const generateScript = async (params: {
   speakers: { name: string; voice: string; provider: 'gemini' | 'elevenlabs'; gender: string; color: string }[];
   lines: { id: string; speaker: string; text: string; scene: string; emotion: string; status: 'idle' }[];
 }> => {
-  const ai = getClient();
-  const format = params.format || 'Podcast Dialogue';
-  const style = params.style || 'High Energy & Engaging';
-  const speakerCount = params.speakerCount || 2;
+  const response = await fetch('/api/ai/generate-script', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
 
-  const prompt = `
-    You are an award-winning audio producer and script writer.
-    Write a compelling audio script based on the following requirements:
-    - Topic / Subject: "${params.topic}"
-    - Format: ${format}
-    - Style / Tone: ${style}
-    - Number of Speakers: ${speakerCount}
-
-    Return a valid JSON object ONLY (no markdown formatting, no code blocks):
-    {
-      "title": "Short catchy title",
-      "summary": "1-2 sentence overview of the scene",
-      "speakers": [
-        {
-          "name": "Speaker Name (e.g. Host Alex)",
-          "gender": "MALE or FEMALE",
-          "voice": "Recommended Gemini voice name such as Algieba, Puck, Leda, Vindemiatrix, Fenrir, Aoede, Charon, Kore, Zubenelgenubi",
-          "provider": "gemini",
-          "color": "red, blue, yellow, or green"
-        }
-      ],
-      "lines": [
-        {
-          "speaker": "Speaker Name",
-          "text": "The exact dialogue text to be spoken naturally.",
-          "scene": "Scene 1: Introduction",
-          "emotion": "Excited, Whispering, Confident, Mysterious, etc."
-        }
-      ]
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Script generation failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
     }
-    Make sure the dialogue has between 4 and 8 dynamic conversational turns that flow naturally.
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-
-    let rawText = response.text || "{}";
-    rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(rawText);
-
-    const speakers = (parsed.speakers || []).map((s: any, idx: number) => ({
-      name: s.name || `Speaker ${idx + 1}`,
-      voice: s.voice || (s.gender === 'FEMALE' ? 'Leda' : 'Puck'),
-      provider: 'gemini' as const,
-      gender: s.gender || 'MALE',
-      color: s.color || (idx === 0 ? 'yellow' : idx === 1 ? 'blue' : 'red')
-    }));
-
-    const lines = (parsed.lines || []).map((l: any, idx: number) => ({
-      id: `line-${idx + 1}-${Date.now()}`,
-      speaker: l.speaker || speakers[0]?.name || 'Speaker 1',
-      text: l.text || '',
-      scene: l.scene || 'Scene 1',
-      emotion: l.emotion || 'Natural',
-      status: 'idle' as const
-    }));
-
-    return {
-      title: parsed.title || 'Generated Audio Script',
-      summary: parsed.summary || 'A multi-speaker audio performance.',
-      speakers,
-      lines
-    };
-  } catch (error) {
-    console.error("Error generating script:", error);
-    throw error;
+    throw new Error(errorData.message || errorData.error || 'Failed to generate script.');
   }
+
+  useEntitlementStore.getState().decrementQuota();
+  return response.json();
 };
 
+/**
+ * Server-Proxied Script Analysis & Doctoring
+ */
 export const analyzeScriptContent = async (rawContent: string): Promise<{
   title: string;
   summary: string;
   speakers: { name: string; voice: string; provider: 'gemini' | 'elevenlabs'; gender: string; color: string }[];
   lines: { id: string; speaker: string; text: string; scene: string; emotion: string; status: 'idle' }[];
 }> => {
-  const ai = getClient();
+  const response = await fetch('/api/ai/analyze-script', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ rawContent }),
+  });
 
-  const prompt = `
-    Analyze the following text or script. Detect any speakers, dialogue turns, scenes, and emotions.
-    If the text has explicit speaker tags (e.g. "Alex: Hello"), parse them.
-    If the text is a raw passage, monologue, or article without speaker tags, break it down into natural dialogue turns between 2 compelling characters (e.g. Narrator / Host or Host A / Host B) who present and react to the ideas engagingly.
-
-    Input Content:
-    "${rawContent}"
-
-    Return a valid JSON object ONLY (no markdown formatting, no code blocks):
-    {
-      "title": "Title reflecting the script content",
-      "summary": "Brief summary of the dialogue",
-      "speakers": [
-        {
-          "name": "Speaker Name",
-          "gender": "MALE or FEMALE",
-          "voice": "Recommended Gemini voice name from: Algieba, Puck, Leda, Vindemiatrix, Fenrir, Aoede, Charon, Kore, Zubenelgenubi",
-          "provider": "gemini",
-          "color": "red, blue, yellow, or green"
-        }
-      ],
-      "lines": [
-        {
-          "speaker": "Speaker Name exactly matching one in speakers list",
-          "text": "The spoken sentence or phrase.",
-          "scene": "Scene 1: Opening",
-          "emotion": "Curious, Bold, Serious, Enthusiastic, Dramatic, etc."
-        }
-      ]
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Script analysis failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
     }
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-
-    let rawText = response.text || "{}";
-    rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(rawText);
-
-    const colors = ['yellow', 'blue', 'red', 'green', 'black'];
-    const geminiVoices = ['Algieba', 'Vindemiatrix', 'Leda', 'Puck', 'Fenrir', 'Aoede', 'Charon', 'Kore'];
-
-    const speakers = (parsed.speakers || []).map((s: any, idx: number) => ({
-      name: s.name || `Speaker ${idx + 1}`,
-      voice: s.voice || geminiVoices[idx % geminiVoices.length],
-      provider: 'gemini' as const,
-      gender: s.gender || (idx % 2 === 0 ? 'MALE' : 'FEMALE'),
-      color: s.color || colors[idx % colors.length]
-    }));
-
-    const lines = (parsed.lines || []).map((l: any, idx: number) => ({
-      id: `line-${idx + 1}-${Date.now()}`,
-      speaker: l.speaker || speakers[0]?.name || 'Speaker 1',
-      text: l.text || '',
-      scene: l.scene || 'Scene 1',
-      emotion: l.emotion || 'Natural',
-      status: 'idle' as const
-    }));
-
-    return {
-      title: parsed.title || 'Analyzed Script',
-      summary: parsed.summary || 'Detected dialogue segments and speaker assignments.',
-      speakers,
-      lines
-    };
-  } catch (error) {
-    console.error("Error analyzing script:", error);
-    throw error;
+    throw new Error(errorData.message || errorData.error || 'Failed to analyze script.');
   }
+
+  useEntitlementStore.getState().decrementQuota();
+  return response.json();
 };
 
+/**
+ * Server-Proxied Dramatization
+ */
 export const dramatizeText = async (text: string, styleInstruction?: string): Promise<string> => {
-  const ai = getClient();
-  
-  const persona = styleInstruction 
-    ? `Style/Persona: ${styleInstruction}` 
-    : `Style: Dramatic, hype-building meeting introduction. Make it intriguing and engaging, to grab people's attention.`;
+  const response = await fetch('/api/ai/dramatize', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ text, styleInstruction }),
+  });
 
-  try {
-    const prompt = `
-      Rewrite this business meeting introduction or text to be more engaging and expressive, according to the specified persona.
-      
-      Persona: ${persona}
-      
-      Guidelines:
-      1. **Natural conversation**: Use patterns of rhythm and expressivity natural to the persona for fluid delivery.
-      2. **Style control**: Incorporate natural language that steers the delivery to adopt the appropriate tone and expression.
-      3. **Dynamic performance**: Bring the text to life with energy suitable for the persona (e.g., poetic, newscast, storytelling).
-      4. **Pace and pronunciation**: Ensure the text allows for clear pronunciation and appropriate pacing.
-      5. **Accuracy**: Keep all core facts, names, and data accurate.
-      6. **Format**: Return ONLY the rewritten text without quotes. Keep it in the original language.
-      
-      Input Text:
-      "${text}"
-    `;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-
-    return response.text || text;
-  } catch (error) {
-    console.error("Error dramatizing text:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Dramatization failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw new Error(errorData.message || errorData.error || 'Failed to dramatize text.');
   }
+
+  const data = await response.json();
+  useEntitlementStore.getState().decrementQuota();
+  return data.dramatizedText;
+};
+
+/**
+ * Server-Proxied Multi-Speaker Dialogue Generation
+ */
+export const generateDialogue = async (params: {
+  lines: { speaker: string; text: string; voice: string; emotion?: string; provider?: 'gemini' | 'elevenlabs' }[];
+  styleInstruction?: string;
+}): Promise<{
+  lines: { id: string; speaker: string; text: string; audioBase64: string; contentType: string; sampleRate?: number }[];
+}> => {
+  const response = await fetch('/api/ai/generate-dialogue', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Dialogue generation failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw new Error(errorData.message || errorData.error || 'Failed to generate dialogue.');
+  }
+
+  useEntitlementStore.getState().decrementQuota();
+  return response.json();
+};
+
+/**
+ * Server-Proxied Voice Catalogue
+ */
+export const getAllVoices = async () => {
+  const response = await fetch('/api/ai/voices', {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch voice catalog from backend.');
+  }
+
+  return response.json();
 };
 

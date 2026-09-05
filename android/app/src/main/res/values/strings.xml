@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AudioFACTORY</string>
+    <string name="title_activity_main">AudioFACTORY</string>
+    <string name="package_name">com.audiofactory.app</string>
+    <string name="custom_url_scheme">audiofactory</string>
+</resources>

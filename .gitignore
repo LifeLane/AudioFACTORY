@@ -1,4 +1,24 @@
 node_modules
 dist
 .env
+.env.*
+!.env.example
+!environments/*.env.example
 .DS_Store
+
+# Android & Keystores
+*.jks
+*.keystore
+android/keystores/*.jks
+android/keystores/*.keystore
+android/app/google-services.json
+android/.gradle
+android/app/build
+android/build
+
+# Service Account & Cloud Credentials
+*service-account*.json
+*firebase-adminsdk*.json
+credentials.json
+key.json
+

@@ -1,4 +1,12 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ * AudioFACTORY Secure ElevenLabs Client
+ * Calls the backend API endpoints to protect ElevenLabs secrets.
+ */
 import { Voice } from '../types';
+import { getAuthHeaders } from './entitlementService';
+import { useEntitlementStore } from '../src/store/useEntitlementStore';
 
 export const DEFAULT_ELEVENLABS_VOICES: Voice[] = [
   { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (ElevenLabs)', gender: 'Female', languageCode: 'en-US', languageName: 'English (US)', provider: 'elevenlabs' },
@@ -14,113 +22,110 @@ export const DEFAULT_ELEVENLABS_VOICES: Voice[] = [
 ];
 
 export const isElevenLabsKeyAvailable = (): boolean => {
-  const key = import.meta.env.VITE_ELEVENLABS_API_KEY;
-  return Boolean(key && typeof key === 'string' && key.trim().length > 0);
-};
-
-const getApiKey = () => {
-  const key = import.meta.env.VITE_ELEVENLABS_API_KEY;
-  if (!key || typeof key !== 'string' || !key.trim()) {
-    throw new Error("VITE_ELEVENLABS_API_KEY is missing in environment variables. Please configure it in your settings or switch to Gemini Voices.");
-  }
-  return key.trim();
+  return true; // Supported through backend server proxy
 };
 
 export const getElevenLabsVoices = async (): Promise<Voice[]> => {
-  const key = import.meta.env.VITE_ELEVENLABS_API_KEY;
-  if (!key || typeof key !== 'string' || !key.trim()) {
-    // Return the curated list without failing
-    return DEFAULT_ELEVENLABS_VOICES;
-  }
   try {
-    const response = await fetch("https://api.elevenlabs.io/v1/voices", {
-      headers: { "xi-api-key": key.trim() },
+    const response = await fetch('/api/ai/voices', {
+      headers: getAuthHeaders(),
     });
-    if (!response.ok) {
-      console.warn("ElevenLabs API voice fetch returned non-ok status. Using default voices list.");
-      return DEFAULT_ELEVENLABS_VOICES;
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.voices && Array.isArray(data.voices) && data.voices.length > 0) {
+        const elevenLabsOnly = data.voices.filter((v: Voice) => v.provider === 'elevenlabs');
+        if (elevenLabsOnly.length > 0) return elevenLabsOnly;
+      }
     }
-    const data = await response.json();
-    if (!data.voices || !Array.isArray(data.voices)) {
-      return DEFAULT_ELEVENLABS_VOICES;
-    }
-    return data.voices.map((v: any) => ({
-      id: v.voice_id,
-      name: `${v.name} (ElevenLabs)`,
-      gender: v.labels?.gender ? (v.labels.gender.charAt(0).toUpperCase() + v.labels.gender.slice(1)) : 'Unknown',
-      languageCode: 'en-US',
-      languageName: 'English (US)',
-      provider: 'elevenlabs' as const
-    }));
+    return DEFAULT_ELEVENLABS_VOICES;
   } catch (err) {
-    console.warn("Error fetching voices from ElevenLabs, falling back to default voice list:", err);
+    console.warn('[ELEVENLABS] Using fallback voices catalogue:', err);
     return DEFAULT_ELEVENLABS_VOICES;
   }
 };
 
-
-export const generateSpeechElevenLabs = async (text: string, voiceId: string): Promise<{ buffer: AudioBuffer, rawData: ArrayBuffer }> => {
-  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-    method: "POST",
-    headers: {
-      "xi-api-key": getApiKey(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      text,
-      model_id: "eleven_monolingual_v1",
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-    }),
+export const generateSpeechElevenLabs = async (
+  text: string, 
+  voiceId: string
+): Promise<{ buffer: AudioBuffer, rawData: ArrayBuffer }> => {
+  const response = await fetch('/api/ai/elevenlabs/tts', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ text, voiceId }),
   });
-  
+
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.detail?.message || "Failed to generate speech");
+    const err = await response.json().catch(() => ({ error: 'Speech synthesis failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw new Error(err.message || err.error || 'Failed to synthesize ElevenLabs speech.');
   }
-  
+
+  useEntitlementStore.getState().decrementQuota();
   const arrayBuffer = await response.arrayBuffer();
-  
-  // Decode audio data
+
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
-  
-  return { buffer: audioBuffer, rawData: arrayBuffer };
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    return { buffer: audioBuffer, rawData: arrayBuffer };
+  } finally {
+    // Audio buffer remains valid in browser memory
+  }
 };
 
 export const cloneVoice = async (name: string, description: string, audioBlob: Blob) => {
-  const formData = new FormData();
-  formData.append("name", name);
-  formData.append("description", description);
-  formData.append("files", audioBlob, "recording.webm");
-
-  const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
-    method: "POST",
-    headers: { "xi-api-key": getApiKey() },
-    body: formData,
-  });
-  
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.detail?.message || "Failed to clone voice");
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
-  
-  return response.json();
+  const base64 = btoa(binary);
+
+  const response = await fetch('/api/ai/clone-voice', {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name,
+      description,
+      audioBase64: base64,
+      mimeType: audioBlob.type || 'audio/webm',
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Voice cloning failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw new Error(err.message || err.error || 'Failed to clone voice.');
+  }
+
+  useEntitlementStore.getState().decrementQuota();
+  const data = await response.json();
+  return data.voice || data;
 };
 
 export const generateBGM = async (prompt: string, duration: number = 10): Promise<ArrayBuffer> => {
-  const response = await fetch("https://api.elevenlabs.io/v1/sound-generation", {
-    method: "POST",
-    headers: {
-      "xi-api-key": getApiKey(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ text: prompt, duration_seconds: duration }),
+  const response = await fetch('/api/ai/generate-bgm', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ prompt, duration }),
   });
-  
+
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.detail?.message || "Failed to generate BGM");
+    const err = await response.json().catch(() => ({ error: 'BGM generation failed' }));
+    if (response.status === 429) {
+      useEntitlementStore.getState().setUpgradeModalOpen(true);
+    }
+    throw new Error(err.message || err.error || 'Failed to generate BGM soundtrack.');
   }
-  
+
+  useEntitlementStore.getState().decrementQuota();
   return response.arrayBuffer();
 };

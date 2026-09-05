@@ -1,0 +1,163 @@
+name: Android Google Play Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Google Play Testing Track'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+      release_status:
+        description: 'Release Status'
+        required: true
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
+          - inProgress
+          - halted
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-google-play:
+    name: Build Signed AAB & Release to Play Console (Internal Track)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+
+    steps:
+      - name: 📥 Checkout Tagged Release
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: ☕ Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📦 Install Node Dependencies
+        run: npm ci
+
+      - name: 🧪 Run Release Test Suite
+        run: |
+          npm run lint
+          npm test
+
+      - name: 🏗️ Compile Web Production Bundle
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_APP_ENV: production
+
+      - name: 🔄 Sync Capacitor Android Native Code
+        run: npx cap sync android
+
+      - name: 🔐 Decode Production Release Keystore
+        id: decode_keystore
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE }}" ]; then
+            echo "❌ CRITICAL ERROR: ANDROID_KEYSTORE secret is missing from repository secrets."
+            exit 1
+          fi
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] || [ -z "${{ secrets.ANDROID_KEY_ALIAS }}" ] || [ -z "${{ secrets.ANDROID_KEY_PASSWORD }}" ]; then
+            echo "❌ CRITICAL ERROR: Keystore signing credentials (password/alias) are incomplete in GitHub Secrets."
+            exit 1
+          fi
+
+          mkdir -p android/keystores
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > android/keystores/release.jks
+          echo "KEYSTORE_PATH=$(pwd)/android/keystores/release.jks" >> $GITHUB_ENV
+          echo "AUDIOFACTORY_KEYSTORE_PATH=$(pwd)/android/keystores/release.jks" >> $GITHUB_ENV
+          echo "✅ Keystore successfully extracted for release signing."
+
+      - name: 🔨 Make Gradlew Executable
+        working-directory: ./android
+        run: chmod +x ./gradlew
+
+      - name: 📦 Build Signed Production Release AAB
+        working-directory: ./android
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          AUDIOFACTORY_KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          AUDIOFACTORY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          AUDIOFACTORY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          AUDIOFACTORY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew bundleRelease --stacktrace
+          
+          # Verify bundle output exists
+          if [ ! -f "app/build/outputs/bundle/release/app-release.aab" ]; then
+            echo "❌ Signed AAB was not generated at expected location!"
+            exit 1
+          fi
+          echo "✅ Signed Android App Bundle compiled successfully."
+
+      - name: 🧹 Clean Up Keystore File
+        if: always()
+        run: |
+          rm -f android/keystores/release.jks
+          echo "✅ Temporary release keystore wiped from runner."
+
+      - name: 📤 Upload Signed AAB Artifact to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-signed-release-${{ github.ref_name }}.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: 🚀 Upload to Google Play Internal Testing Track
+        id: upload_play_store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonRaw: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: com.audiofactory.app
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ github.event.inputs.track || 'internal' }}
+          status: ${{ github.event.inputs.release_status || 'completed' }}
+          changesNotSentForReview: false
+
+      - name: 🏷️ Create GitHub Release with Attached AAB
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: android/app/build/outputs/bundle/release/app-release.aab
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Google Play Release Summary
+        run: |
+          echo "### 🚀 Google Play Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Tag:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package Name:** \`com.audiofactory.app\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Google Play Track:** \`${{ github.event.inputs.track || 'internal' }}\` *(Internal Testing only - manual promotion to production required)*" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** \`${{ github.event.inputs.release_status || 'completed' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security:** Keystore wiped and credentials isolated." >> $GITHUB_STEP_SUMMARY

@@ -18,6 +18,7 @@ import { TerminalWindow } from './TerminalWindow';
 import { IntroStyle } from '../../types';
 import { INTRO_STYLES } from '../../constants';
 import { LivePresenceBar } from '../LivePresenceBar';
+import { QuotaExhaustedBanner } from '../QuotaExhaustedBanner';
 
 interface TerminalMonologueViewProps {
   text: string;
@@ -82,6 +83,9 @@ export const TerminalMonologueView: React.FC<TerminalMonologueViewProps> = ({
       <div className="flex-shrink-0">
         <LivePresenceBar className="border border-[#30363D] bg-[#161B22]" />
       </div>
+
+      {/* Quota Exhaustion & Upgrade Prompt */}
+      <QuotaExhaustedBanner actionName="monologue generation" />
 
       {/* WINDOW 1: MASTER COMMAND STATION & AUDIO DECK */}
       <TerminalWindow

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AudioFACTORY | Enterprise AI Voice & Multi-Speaker Audio Production</title>
+  <meta name="description" content="AudioFACTORY is the next-generation AI audio studio for multi-speaker dialogues, instant voice cloning, script analysis, and lossless 24kHz mastering." />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body class="bg-[#0D1117] text-[#C9D1D9] antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-[#0D1117]/85 border-b border-[#30363D]">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-lg">
+          A
+        </div>
+        <span class="text-lg font-extrabold tracking-wider font-mono text-white">Audio<span class="text-amber-400">FACTORY</span></span>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-zinc-400">
+        <a href="#features" class="hover:text-white transition-colors">Features</a>
+        <a href="#architecture" class="hover:text-white transition-colors">Architecture</a>
+        <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+        <a href="#mobile" class="hover:text-white transition-colors">Android App</a>
+      </nav>
+
+      <div class="flex items-center gap-4">
+        <a href="/" class="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-extrabold uppercase tracking-wider transition-all shadow-md shadow-amber-500/20">
+          Launch Studio
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="py-24 px-6 max-w-7xl mx-auto text-center flex flex-col items-center">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-mono font-bold mb-8">
+      <span>⚡ Gemini 2.5 Flash TTS + ElevenLabs Hybrid Audio Engine</span>
+    </div>
+
+    <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight max-w-4xl leading-tight mb-6">
+      Studio-Grade AI Voice & <br/>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-sky-400">
+        Multi-Speaker Production
+      </span>
+    </h1>
+
+    <p class="text-lg text-zinc-400 max-w-2xl mb-10 leading-relaxed">
+      Craft cinematic podcast scenes, dramatized narrations, and instant zero-latency voice clones with server-authoritative rendering, live presence collaboration, and lossless 24kHz export.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center gap-4">
+      <a href="/" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm tracking-wide transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2">
+        Open Audio Studio &rarr;
+      </a>
+      <a href="#pricing" class="w-full sm:w-auto px-8 py-3.5 rounded-xl border border-[#30363D] hover:bg-[#161B22] text-zinc-300 font-bold text-sm transition-all flex items-center justify-center">
+        View Pricing Plans
+      </a>
+    </div>
+
+    <!-- Live Preview Card Mockup -->
+    <div class="w-full max-w-5xl mt-16 rounded-2xl border border-[#30363D] bg-[#161B22] p-4 sm:p-6 shadow-2xl text-left font-mono">
+      <div class="flex items-center justify-between pb-4 border-b border-[#30363D] mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+          <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+          <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+          <span class="ml-2 text-xs text-zinc-500">audiofactory-studio-engine // 24000Hz PCM</span>
+        </div>
+        <span class="text-xs text-emerald-400 font-bold">ONLINE &bull; SERVER-SIDE AI</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div class="p-4 rounded-xl bg-[#0D1117] border border-[#30363D]">
+          <div class="text-amber-400 font-bold mb-1">Speaker A: Host Alex</div>
+          <p class="text-zinc-400 font-sans">"Welcome back listeners! Today we are demonstrating native multi-speaker AI synthesis with dynamic turn allocation."</p>
+          <div class="mt-3 text-[10px] text-zinc-500 font-mono">Algieba (Gemini 2.5 Flash) &bull; 24kHz</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-[#0D1117] border border-[#30363D]">
+          <div class="text-sky-400 font-bold mb-1">Speaker B: Dr. Elena</div>
+          <p class="text-zinc-400 font-sans">"The acoustic fidelity is unmatched. Notice how pause intervals and natural emotion cues blend seamlessly."</p>
+          <div class="mt-3 text-[10px] text-zinc-500 font-mono">Leda (Gemini 2.5 Flash) &bull; 24kHz</div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-[#0D1117] border border-[#30363D]">
+          <div class="text-rose-400 font-bold mb-1">Voice Clone: Rachel</div>
+          <p class="text-zinc-400 font-sans">"Instant voice cloning allows creators to maintain custom brand identities across entire episodes."</p>
+          <div class="mt-3 text-[10px] text-zinc-500 font-mono">ElevenLabs Neural Engine &bull; Lossless</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" class="py-20 px-6 max-w-7xl mx-auto border-t border-[#30363D]">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl font-extrabold text-white mb-3">Enterprise Studio Architecture</h2>
+      <p class="text-sm text-zinc-400">Engineered for creators, developers, and enterprise audio pipelines.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-[#30363D]">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold mb-4">01</div>
+        <h3 class="text-lg font-bold text-white mb-2">Multi-Speaker Scene Engine</h3>
+        <p class="text-sm text-zinc-400">Generate multi-character dialogue scenes with custom speaker colors, emotion presets, and automated audio buffer stitching.</p>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-[#30363D]">
+        <div class="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold mb-4">02</div>
+        <h3 class="text-lg font-bold text-white mb-2">Zero-Leak Server Security</h3>
+        <p class="text-sm text-zinc-400">All Gemini and ElevenLabs secret keys are protected behind trusted backend proxies with server-side quota verification.</p>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-[#30363D]">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold mb-4">03</div>
+        <h3 class="text-lg font-bold text-white mb-2">Google Play Cross-Entitlement</h3>
+        <p class="text-sm text-zinc-400">Seamless mobile packaging via Capacitor with Google Play In-App Billing verification and cross-platform sync.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="py-20 px-6 max-w-7xl mx-auto border-t border-[#30363D]">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl font-extrabold text-white mb-3">Transparent Plans & Quotas</h2>
+      <p class="text-sm text-zinc-400">Choose the plan that fits your production volume.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Guest -->
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-[#30363D] flex flex-col justify-between">
+        <div>
+          <div class="text-xs font-mono font-bold text-zinc-500 uppercase mb-1">Sandbox</div>
+          <h3 class="text-xl font-bold text-white mb-2">Guest Pass</h3>
+          <div class="text-2xl font-extrabold text-white mb-4">$0 <span class="text-xs text-zinc-500">/ forever</span></div>
+          <ul class="text-xs space-y-2 text-zinc-400 mb-6 font-mono">
+            <li>&bull; 3 daily generations</li>
+            <li>&bull; Gemini 2.5 voices</li>
+            <li>&bull; Single session storage</li>
+          </ul>
+        </div>
+        <a href="/" class="w-full py-2 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-center text-xs font-bold text-white">
+          Try Guest Pass
+        </a>
+      </div>
+
+      <!-- Free -->
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-[#30363D] flex flex-col justify-between">
+        <div>
+          <div class="text-xs font-mono font-bold text-blue-400 uppercase mb-1">Registered</div>
+          <h3 class="text-xl font-bold text-white mb-2">Creator Free</h3>
+          <div class="text-2xl font-extrabold text-white mb-4">$0 <span class="text-xs text-zinc-500">/ forever</span></div>
+          <ul class="text-xs space-y-2 text-zinc-400 mb-6 font-mono">
+            <li>&bull; 10 daily generations</li>
+            <li>&bull; Firebase cloud sync</li>
+            <li>&bull; Multi-speaker studio</li>
+            <li>&bull; Lossless 24kHz export</li>
+          </ul>
+        </div>
+        <a href="/" class="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-center text-xs font-bold text-white">
+          Sign In Free
+        </a>
+      </div>
+
+      <!-- Pro Monthly -->
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-amber-500 flex flex-col justify-between relative shadow-lg shadow-amber-500/10">
+        <div>
+          <div class="text-xs font-mono font-bold text-amber-400 uppercase mb-1">Most Popular</div>
+          <h3 class="text-xl font-bold text-white mb-2">Pro Monthly</h3>
+          <div class="text-2xl font-extrabold text-amber-400 mb-4">$19 <span class="text-xs text-zinc-500">/ month</span></div>
+          <ul class="text-xs space-y-2 text-zinc-300 mb-6 font-mono">
+            <li>&bull; <strong>Unlimited</strong> generations</li>
+            <li>&bull; ElevenLabs voice access</li>
+            <li>&bull; Instant voice cloning</li>
+            <li>&bull; BGM soundtrack generator</li>
+          </ul>
+        </div>
+        <a href="/" class="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-center text-xs font-bold text-zinc-950">
+          Subscribe Pro
+        </a>
+      </div>
+
+      <!-- Lifetime -->
+      <div class="p-6 rounded-2xl bg-[#161B22] border border-purple-500 flex flex-col justify-between">
+        <div>
+          <div class="text-xs font-mono font-bold text-purple-400 uppercase mb-1">Permanent</div>
+          <h3 class="text-xl font-bold text-white mb-2">Studio Lifetime</h3>
+          <div class="text-2xl font-extrabold text-purple-400 mb-4">$299 <span class="text-xs text-zinc-500">/ one-time</span></div>
+          <ul class="text-xs space-y-2 text-zinc-400 mb-6 font-mono">
+            <li>&bull; Permanent unlimited access</li>
+            <li>&bull; All future model updates</li>
+            <li>&bull; Priority GPU cluster</li>
+            <li>&bull; VIP support tier</li>
+          </ul>
+        </div>
+        <a href="/" class="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-center text-xs font-bold text-white">
+          Get Lifetime
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Android Packaging Section -->
+  <section id="mobile" class="py-20 px-6 max-w-7xl mx-auto border-t border-[#30363D]">
+    <div class="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-[#161B22] to-[#1C2128] border border-[#30363D] flex flex-col md:flex-row items-center justify-between gap-8">
+      <div class="max-w-xl">
+        <span class="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">Android & Google Play Ready</span>
+        <h2 class="text-3xl font-extrabold text-white mt-3 mb-4">Packaged for Android with Capacitor</h2>
+        <p class="text-sm text-zinc-400 leading-relaxed mb-6">
+          AudioFACTORY compiles directly into a native Android app via Capacitor with hardware microphone access, offline caching, and Google Play In-App Billing verification.
+        </p>
+        <div class="flex items-center gap-4 text-xs font-mono text-zinc-400">
+          <span>Package: <code class="text-amber-400">com.audiofactory.app</code></span>
+          <span>&bull;</span>
+          <span>Target: <code class="text-sky-400">Android 14 (API 34)</code></span>
+        </div>
+      </div>
+      <a href="/" class="px-6 py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all shadow-md">
+        Launch Web Studio
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 px-6 border-t border-[#30363D] text-center text-xs text-zinc-500 font-mono">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>&copy; 2026 AudioFACTORY Enterprise Studio. All rights reserved.</div>
+      <div class="flex items-center gap-6">
+        <a href="/docs/architecture.md" class="hover:text-zinc-300">Docs</a>
+        <a href="#pricing" class="hover:text-zinc-300">Plans</a>
+        <a href="/" class="hover:text-zinc-300">Studio App</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { IntroStyle, Voice } from '../types';
 import { LivePresenceBar } from './LivePresenceBar';
+import { QuotaExhaustedBanner } from './QuotaExhaustedBanner';
 import { useLiveblocks } from '../services/liveblocksContext';
 
 interface MonologueBentoStudioProps {
@@ -94,6 +95,9 @@ export const MonologueBentoStudio: React.FC<MonologueBentoStudioProps> = ({
       
       {/* Liveblocks Real-Time Collaboration Bar */}
       <LivePresenceBar />
+
+      {/* Quota Exhaustion & Upgrade Prompt */}
+      <QuotaExhaustedBanner actionName="monologue generation" />
 
       {/* Error Notice */}
       {audioError && (
