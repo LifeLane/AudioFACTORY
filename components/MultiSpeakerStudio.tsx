@@ -48,6 +48,7 @@ interface MultiSpeakerStudioProps {
   onBgmOverlay?: (buffer: AudioBuffer) => void;
   onOpenCloudModal?: () => void;
   loadedProject?: SavedAudioProject | null;
+  onRequireAuth?: () => void;
 }
 
 const SPEAKER_COLOR_MAP: Record<string, { bg: string; text: string; dot: string; ring: string; lightBg: string }> = {
@@ -103,8 +104,9 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   onBgmOverlay,
   onOpenCloudModal,
   loadedProject,
+  onRequireAuth
 }) => {
-  const { savedProjects, saveProjectToCloud, isSaving } = useFirebase();
+  const { savedProjects, saveProjectToCloud, isSaving, user } = useFirebase();
   const { collaborators, broadcastAudioPlay, setActiveEditingLine } = useLiveblocks();
   const [justSaved, setJustSaved] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
@@ -289,6 +291,11 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
 
   // Generate audio for one line
   const handleGenerateLine = async (lineId: string) => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
+
     const line = lines.find(l => l.id === lineId);
     if (!line) return;
 
@@ -345,6 +352,11 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
 
   // Generate All lines (Combined sequence)
   const handleGenerateAllLines = async () => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
+
     stopCurrentPlayback();
     setIsBatchGenerating(true);
     setErrorMessage(null);
@@ -456,6 +468,11 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
 
   // AI Script Generation
   const handleGenerateScriptWithAI = async () => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
+
     if (!topic.trim()) return;
     setIsScriptGenerating(true);
     setErrorMessage(null);

@@ -3,8 +3,11 @@ import { Music, Loader2, Sparkles, Play, Pause, Volume2, CheckCircle2 } from 'lu
 import { generateBGM } from '../services/elevenLabsService';
 import { decodeBase64ToBytes } from '../services/geminiService';
 
+import { useFirebase } from '../services/firebaseContext';
+
 interface BgmGeneratorProps {
   onBgmGenerated: (audioBuffer: ArrayBuffer) => void;
+  onRequireAuth?: () => void;
 }
 
 const PRESET_STYLES = [
@@ -14,7 +17,8 @@ const PRESET_STYLES = [
   { label: 'Ambient Drone', prompt: 'Deep meditative ambient drone pad with gentle resonant echoes' }
 ];
 
-export const BgmGenerator: React.FC<BgmGeneratorProps> = ({ onBgmGenerated }) => {
+export const BgmGenerator: React.FC<BgmGeneratorProps> = ({ onBgmGenerated, onRequireAuth }) => {
+  const { user } = useFirebase();
   const [prompt, setPrompt] = useState('Chill lo-fi synthwave beat with soft vinyl crackle and electric keys');
   const [duration, setDuration] = useState<number>(15);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -22,6 +26,10 @@ export const BgmGenerator: React.FC<BgmGeneratorProps> = ({ onBgmGenerated }) =>
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
 
   const handleGenerate = async () => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
     if (!prompt.trim()) return;
     setIsGenerating(true);
     setError(null);

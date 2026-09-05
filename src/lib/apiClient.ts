@@ -10,7 +10,11 @@ export function getApiBaseUrl(): string {
   // If explicitly provided via VITE_API_BASE_URL (e.g. Cloud Run production URL)
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim() !== '') {
-    return envUrl.replace(/\/+$/, '');
+    let sanitized = envUrl.trim().replace(/\/+$/, '');
+    if (!sanitized.startsWith('http')) {
+      sanitized = `https://${sanitized}`;
+    }
+    return sanitized;
   }
 
   // Fallback to relative /api in both dev and prod

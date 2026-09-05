@@ -33,6 +33,7 @@ import { PlanUpgradeModal } from '../../components/PlanUpgradeModal';
 import { GenerationQuotaBadge } from '../../components/GenerationQuotaBadge';
 import { AccountDrawer } from '../../components/AccountDrawer';
 import { DailyQuotaExhaustedModal } from '../../components/DailyQuotaExhaustedModal';
+import { AuthModal } from '../../components/AuthModal';
 import { useGenerationQuota } from '../hooks/useGenerationQuota';
 import { useEntitlementStore } from '../store/useEntitlementStore';
 import { useDeepLinks } from '../hooks';
@@ -103,6 +104,7 @@ export const StudioApp: React.FC = () => {
   const [isCloningOpen, setIsCloningOpen] = useState<boolean>(false);
   const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
   const [isQuotaExhaustedModalOpen, setIsQuotaExhaustedModalOpen] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // Deep Link & Native Android Lifecycle Handler
   useDeepLinks({
@@ -255,6 +257,11 @@ export const StudioApp: React.FC = () => {
   // Generate Speech Audio
   const handleGenerateSpeech = async () => {
     if (!text.trim() || isGenerating) return;
+
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
 
     // Check quota before initiating generation
     if (!isUnlimited && isExhausted) {
@@ -572,6 +579,7 @@ export const StudioApp: React.FC = () => {
               onBgmOverlay={(buf) => setBgmBuffer(buf)} 
               loadedProject={loadedMultiSpeakerProject}
               onOpenCloudModal={() => setIsCloudModalOpen(true)}
+              onRequireAuth={() => setIsAuthModalOpen(true)}
             />
           </div>
         )}
@@ -582,6 +590,7 @@ export const StudioApp: React.FC = () => {
               onBgmBufferGenerated={(buf: AudioBuffer) => setBgmBuffer(buf)}
               activeBgmBuffer={bgmBuffer}
               onOpenVoiceCloning={() => setIsCloningOpen(true)}
+              onRequireAuth={() => setIsAuthModalOpen(true)}
             />
           </div>
         )}
@@ -638,6 +647,15 @@ export const StudioApp: React.FC = () => {
         onUpgrade={() => {
           setIsQuotaExhaustedModalOpen(false);
           setUpgradeModalOpen(true);
+        }}
+      />
+
+      {/* Auth Modal for Onboarding */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={() => {
+          setIsAuthModalOpen(false);
         }}
       />
 

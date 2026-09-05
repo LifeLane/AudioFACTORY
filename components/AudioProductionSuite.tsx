@@ -23,11 +23,13 @@ import { BgmGenerator } from './BgmGenerator';
 import { generateBGM } from '../services/elevenLabsService';
 import { decodeBase64ToBytes } from '../services/geminiService';
 import { LivePresenceBar } from './LivePresenceBar';
+import { useFirebase } from '../services/firebaseContext';
 
 interface AudioProductionSuiteProps {
   onBgmBufferGenerated?: (buffer: AudioBuffer) => void;
   onOpenVoiceCloning: () => void;
   activeBgmBuffer?: AudioBuffer | null;
+  onRequireAuth?: () => void;
 }
 
 const QUICK_SFX_PRESETS = [
@@ -40,8 +42,10 @@ const QUICK_SFX_PRESETS = [
 export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
   onBgmBufferGenerated,
   onOpenVoiceCloning,
-  activeBgmBuffer
+  activeBgmBuffer,
+  onRequireAuth
 }) => {
+  const { user } = useFirebase();
   const [sfxGeneratingId, setSfxGeneratingId] = useState<string | null>(null);
   const [generatedSfx, setGeneratedSfx] = useState<Record<string, string>>({});
   const [playingSfxId, setPlayingSfxId] = useState<string | null>(null);
@@ -49,6 +53,10 @@ export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
   const [voiceVolume, setVoiceVolume] = useState<number>(100);
 
   const handleGenerateQuickSfx = async (preset: typeof QUICK_SFX_PRESETS[0]) => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
     setSfxGeneratingId(preset.id);
     try {
       const buffer = await generateBGM(preset.prompt, 5);
@@ -138,7 +146,8 @@ export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
                 const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
                 const decoded = await ctx.decodeAudioData(buf.slice(0));
                 onBgmBufferGenerated?.(decoded);
-              }} 
+              }}
+              onRequireAuth={onRequireAuth}
             />
           </div>
         </div>
