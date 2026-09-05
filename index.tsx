@@ -9,6 +9,7 @@ import './index.css';
 import { FirebaseProvider } from './services/firebaseContext';
 import { LiveblocksProvider } from './services/liveblocksContext';
 import { TerminalProvider } from './components/terminal/TerminalContext';
+import { Analytics } from '@vercel/analytics/react';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -22,6 +23,7 @@ root.render(
       <LiveblocksProvider>
         <TerminalProvider>
           <App />
+          <Analytics />
         </TerminalProvider>
       </LiveblocksProvider>
     </FirebaseProvider>
