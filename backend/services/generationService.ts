@@ -5,7 +5,7 @@
  * Orchestrates user authentication, entitlements, atomic quota reservation,
  * provider execution, failure reconciliation, and structured Firestore job records.
  */
-import { providerRegistry } from '../providers/providerRegistry';
+import { providerRegistry } from '../providers/providerRegistry.js';
 import {
   ProviderName,
   SpeechParams,
@@ -19,16 +19,16 @@ import {
   VoiceCloneParams,
   VoiceCloneResult,
   VoiceInfo,
-} from '../providers/AIProvider';
-import { JobService } from './jobService';
+} from '../providers/AIProvider.js';
+import { JobService } from './jobService.js';
 import {
   atomicallyReserveGeneration,
   recordGenerationResult,
   acquireConcurrencySlot,
   releaseConcurrencySlot,
   validateGenerationPayload,
-} from '../usageManager';
-import { PLANS } from '../../shared/plans';
+} from '../usageManager.js';
+import { PLANS } from '../../shared/plans.js';
 
 export interface GenerationUserContext {
   userId: string;

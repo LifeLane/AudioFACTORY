@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * AudioFACTORY Google Play Entitlement Verifier
  */
-import { PRODUCT_IDS, ProductIdentifier, UserPlan, PurchaseRecord } from '../shared/types';
-import { setUserPlan } from './quotaStore';
-import { config } from './config';
+import { PRODUCT_IDS, ProductIdentifier, UserPlan, PurchaseRecord } from '../shared/types.js';
+import { setUserPlan } from './quotaStore.js';
+import { config } from './config.js';
 
 export interface VerifyPlayPurchasePayload {
   userId: string;

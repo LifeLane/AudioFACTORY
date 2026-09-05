@@ -29,7 +29,7 @@ interface AudioProductionSuiteProps {
   onBgmBufferGenerated?: (buffer: AudioBuffer) => void;
   onOpenVoiceCloning: () => void;
   activeBgmBuffer?: AudioBuffer | null;
-  onRequireAuth?: () => void;
+  onRequireAuth?: (action?: () => void) => void;
 }
 
 const QUICK_SFX_PRESETS = [

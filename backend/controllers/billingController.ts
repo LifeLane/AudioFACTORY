@@ -4,13 +4,12 @@
  * AudioFACTORY Authoritative Billing & Entitlement Controller
  */
 import { Request, Response } from 'express';
-import { PLANS, getPlanFromProductId } from '../../shared/plans';
-import { resolveEntitlement, saveUserEntitlement } from '../services/entitlementResolver';
-import { GooglePlayService } from '../services/googlePlayService';
-import { UserPlan, Entitlement, PurchaseRecord } from '../../shared/types';
-import { extractUserFromRequest } from './aiController';
-import { getTodayUsageRecord, serverDb } from '../usageManager';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { PLANS, getPlanFromProductId } from '../../shared/plans.js';
+import { resolveEntitlement, saveUserEntitlement } from '../services/entitlementResolver.js';
+import { GooglePlayService } from '../services/googlePlayService.js';
+import { UserPlan, Entitlement, PurchaseRecord } from '../../shared/types.js';
+import { extractUserFromRequest } from './aiController.js';
+import { getTodayUsageRecord, serverDb } from '../usageManager.js';
 
 export function handleGetPlans(_req: Request, res: Response): void {
   res.json({
@@ -206,9 +205,9 @@ export async function handleGetPurchases(req: Request, res: Response): Promise<v
       return;
     }
 
-    const purchasesRef = collection(serverDb, 'users', userId, 'purchases');
-    const q = query(purchasesRef, orderBy('purchasedAt', 'desc'), limit(50));
-    const snapshot = await getDocs(q);
+    const purchasesRef = serverDb.collection('users').doc(userId).collection('purchases');
+    const q = purchasesRef.orderBy('purchasedAt', 'desc').limit(50);
+    const snapshot = await q.get();
 
     const purchases: PurchaseRecord[] = [];
     snapshot.forEach((docSnap) => {

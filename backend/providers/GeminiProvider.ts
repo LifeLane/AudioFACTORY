@@ -5,7 +5,7 @@
  * Server-only integration with @google/genai (Gemini 2.5 Flash & Speech Synthesis).
  */
 import { GoogleGenAI, Modality } from '@google/genai';
-import { getGeminiKey } from '../config';
+import { getGeminiKey } from '../config.js';
 import {
   AIProvider,
   ProviderName,
@@ -22,7 +22,7 @@ import {
   VoiceCloneParams,
   VoiceCloneResult,
   VoiceInfo,
-} from './AIProvider';
+} from './AIProvider.js';
 
 export const GEMINI_PREBUILT_VOICES: VoiceInfo[] = [
   { id: 'Algieba', name: 'Algieba (Gemini Deep Male)', gender: 'Male', languageCode: 'en-US', languageName: 'English (US)', provider: 'gemini' },

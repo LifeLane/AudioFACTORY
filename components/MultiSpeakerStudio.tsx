@@ -48,7 +48,7 @@ interface MultiSpeakerStudioProps {
   onBgmOverlay?: (buffer: AudioBuffer) => void;
   onOpenCloudModal?: () => void;
   loadedProject?: SavedAudioProject | null;
-  onRequireAuth?: () => void;
+  onRequireAuth?: (action?: () => void) => void;
 }
 
 const SPEAKER_COLOR_MAP: Record<string, { bg: string; text: string; dot: string; ring: string; lightBg: string }> = {
@@ -650,7 +650,7 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
           {/* Key Control on Top: Batch Synthesize */}
           {lines.length > readyCount && (
             <button
-              onClick={handleGenerateAllLines}
+              onClick={() => handleGenerateAllLines()}
               disabled={isBatchGenerating}
               className="px-2.5 py-1.5 rounded-md text-xs font-mono font-bold border border-amber-400 bg-amber-400 hover:bg-amber-300 text-zinc-950 flex items-center gap-1.5 shadow-xs"
               title={`Synthesize all ${lines.length - readyCount} remaining lines`}
@@ -868,7 +868,7 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
             </div>
 
             <BauhausButton
-              onClick={handleGenerateScriptWithAI}
+              onClick={() => handleGenerateScriptWithAI()}
               disabled={isScriptGenerating || !topic.trim()}
               variant="primary"
               className="px-4 py-2 text-xs"

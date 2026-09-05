@@ -4,9 +4,8 @@
  * AudioFACTORY Structured Generation Job Service
  * Persists and updates generation jobs in Firestore under users/{uid}/generationJobs/{jobId}
  */
-import { doc, setDoc, updateDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { serverDb } from '../usageManager';
-import { ProviderName, JobType } from '../providers/AIProvider';
+import { serverDb } from '../usageManager.js';
+import { ProviderName, JobType } from '../providers/AIProvider.js';
 
 export interface GenerationJobRecord {
   jobId: string;
@@ -57,8 +56,8 @@ export class JobService {
     };
 
     try {
-      const jobRef = doc(serverDb, 'users', params.uid, 'generationJobs', params.jobId);
-      await setDoc(jobRef, jobRecord);
+      const jobRef = serverDb.collection('users').doc(params.uid).collection('generationJobs').doc(params.jobId);
+      await jobRef.set(jobRecord);
     } catch (err) {
       console.warn(`[JOBS] Failed to persist initial job ${params.jobId} in Firestore:`, err);
     }
@@ -85,8 +84,8 @@ export class JobService {
     delete safeMetadata.audioBase64;
 
     try {
-      const jobRef = doc(serverDb, 'users', params.uid, 'generationJobs', params.jobId);
-      await updateDoc(jobRef, {
+      const jobRef = serverDb.collection('users').doc(params.uid).collection('generationJobs').doc(params.jobId);
+      await jobRef.update({
         status: 'completed',
         completedAt: nowIso,
         duration,
@@ -113,8 +112,8 @@ export class JobService {
     const nowIso = new Date(nowMs).toISOString();
 
     try {
-      const jobRef = doc(serverDb, 'users', params.uid, 'generationJobs', params.jobId);
-      await updateDoc(jobRef, {
+      const jobRef = serverDb.collection('users').doc(params.uid).collection('generationJobs').doc(params.jobId);
+      await jobRef.update({
         status: 'failed',
         completedAt: nowIso,
         duration,
@@ -131,9 +130,9 @@ export class JobService {
    */
   public static async getUserJobs(uid: string, maxLimit: number = 20): Promise<GenerationJobRecord[]> {
     try {
-      const jobsCol = collection(serverDb, 'users', uid, 'generationJobs');
-      const q = query(jobsCol, orderBy('createdAt', 'desc'), limit(maxLimit));
-      const snap = await getDocs(q);
+      const jobsCol = serverDb.collection('users').doc(uid).collection('generationJobs');
+      const q = jobsCol.orderBy('createdAt', 'desc').limit(maxLimit);
+      const snap = await q.get();
 
       return snap.docs.map(d => d.data() as GenerationJobRecord);
     } catch (err) {

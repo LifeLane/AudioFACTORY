@@ -4,7 +4,7 @@
  * AudioFACTORY ElevenLabs AI Provider
  * Server-only integration with ElevenLabs REST API.
  */
-import { getElevenLabsKey } from '../config';
+import { getElevenLabsKey } from '../config.js';
 import {
   AIProvider,
   ProviderName,
@@ -19,7 +19,7 @@ import {
   VoiceCloneParams,
   VoiceCloneResult,
   VoiceInfo,
-} from './AIProvider';
+} from './AIProvider.js';
 
 export const ELEVENLABS_FALLBACK_VOICES: VoiceInfo[] = [
   { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (ElevenLabs)', gender: 'Female', languageCode: 'en-US', languageName: 'English (US)', provider: 'elevenlabs' },

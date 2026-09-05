@@ -4,7 +4,7 @@
 * AudioFACTORY Authoritative Authentication Middleware
 */
 import { Request, Response, NextFunction } from 'express';
-import { adminAuth } from '../firebaseAdmin';
+import { adminAuth } from '../firebaseAdmin.js';
 
 export interface AuthenticatedUser {
   uid: string;

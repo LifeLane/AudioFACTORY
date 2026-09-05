@@ -5,8 +5,8 @@
  * Authoritative verification engine for Android in-app purchases and subscriptions.
  */
 import crypto from 'crypto';
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { serverDb } from '../usageManager';
+// Remove firestore import
+import { serverDb } from '../usageManager.js';
 import { 
   PRODUCT_IDS, 
   ProductIdentifier, 
@@ -14,10 +14,10 @@ import {
   PurchaseRecord, 
   SubscriptionLifecycleStatus,
   Entitlement
-} from '../../shared/types';
-import { PLANS, getPlanFromProductId } from '../../shared/plans';
-import { config } from '../config';
-import { saveUserEntitlement, invalidateEntitlementCache, resolveEntitlement } from './entitlementResolver';
+} from '../../shared/types.js';
+import { PLANS, getPlanFromProductId } from '../../shared/plans.js';
+import { config } from '../config.js';
+import { saveUserEntitlement, invalidateEntitlementCache, resolveEntitlement } from './entitlementResolver.js';
 
 export interface VerifyPlayPurchaseInput {
   userId: string;
@@ -117,7 +117,7 @@ export class GooglePlayService {
     }
 
     // 5. Create audit record for `users/{uid}/purchases/{purchaseId}`
-    const purchaseRecordDocRef = doc(serverDb, 'users', userId, 'purchases', purchaseId);
+    const purchaseRecordDocRef = serverDb.collection('users').doc(userId).collection('purchases').doc(purchaseId);
     const purchaseRecord: PurchaseRecord = {
       id: purchaseId,
       purchaseId,
@@ -142,7 +142,7 @@ export class GooglePlayService {
       updatedAt: nowIso,
     };
 
-    await setDoc(purchaseRecordDocRef, purchaseRecord, { merge: true });
+    await purchaseRecordDocRef.set(purchaseRecord, { merge: true });
 
     // 6. Write authoritative current entitlement to `users/{uid}/entitlements/current`
     const updatedEntitlement = await saveUserEntitlement(userId, {

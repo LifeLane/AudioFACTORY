@@ -7,7 +7,7 @@ import { useFirebase } from '../services/firebaseContext';
 
 interface BgmGeneratorProps {
   onBgmGenerated: (audioBuffer: ArrayBuffer) => void;
-  onRequireAuth?: () => void;
+  onRequireAuth?: (action?: () => void) => void;
 }
 
 const PRESET_STYLES = [
@@ -110,7 +110,7 @@ export const BgmGenerator: React.FC<BgmGeneratorProps> = ({ onBgmGenerated, onRe
         </div>
 
         <button 
-          onClick={handleGenerate} 
+          onClick={() => handleGenerate()} 
           disabled={isGenerating || !prompt.trim()}
           className="px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-950 font-mono text-xs font-bold uppercase tracking-wider border border-amber-500 flex items-center gap-2 shadow-xs transition-all active:scale-95"
         >

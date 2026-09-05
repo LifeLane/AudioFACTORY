@@ -3,16 +3,16 @@
 * SPDX-License-Identifier: Apache-2.0
 * AudioFACTORY Single Authoritative Backend Entitlement Resolver (Firebase Admin SDK)
 */
-import { adminDb } from '../firebaseAdmin';
-import { getTodayUtcDateString } from '../usageManager';
+import { adminDb } from '../firebaseAdmin.js';
+import { getTodayUtcDateString } from '../usageManager.js';
 import { 
   Entitlement, 
   UserPlan, 
   SubscriptionLifecycleStatus, 
   EntitlementSource, 
   FeatureEntitlement 
-} from '../../shared/types';
-import { PLANS, resolveEntitlement as buildEntitlementObject } from '../../shared/plans';
+} from '../../shared/types.js';
+import { PLANS, resolveEntitlement as buildEntitlementObject } from '../../shared/plans.js';
 
 interface CachedEntitlementEntry {
   entitlement: Entitlement;
