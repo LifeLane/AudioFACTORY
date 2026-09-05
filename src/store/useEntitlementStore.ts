@@ -15,6 +15,11 @@ import {
   restorePurchases as executeRestorePurchases,
   openGooglePlaySubscriptionManagement
 } from '../../services/entitlementService';
+import { 
+  isRevenueCatSupported, 
+  presentRevenueCatPaywall, 
+  checkProEntitlement 
+} from '../../services/revenueCatService';
 
 interface EntitlementState {
   entitlement: Entitlement;
@@ -62,6 +67,27 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
   purchase: async (productId, user) => {
     set({ isLoading: true, billingMessage: null });
     try {
+      if (isRevenueCatSupported()) {
+        const success = await presentRevenueCatPaywall();
+        if (success) {
+          const hasPro = await checkProEntitlement();
+          if (hasPro) {
+            const entitlement = resolveEntitlement('pro_monthly', 100);
+            set({ 
+              entitlement, 
+              isLoading: false, 
+              billingMessage: 'Welcome to Pro! Premium unlocked via RevenueCat.' 
+            });
+            return { success: true, message: 'Welcome to Pro! Premium unlocked via RevenueCat.' };
+          }
+        }
+        set({ 
+          isLoading: false, 
+          billingMessage: 'RevenueCat purchase flow was cancelled or failed.' 
+        });
+        return { success: false, message: 'RevenueCat purchase flow was cancelled or failed.' };
+      }
+
       const result = await executePurchaseProduct(productId, user);
       if (result.success && result.entitlement) {
         set({ 
@@ -87,6 +113,25 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
   restore: async (user) => {
     set({ isRestoring: true, billingMessage: null });
     try {
+      if (isRevenueCatSupported()) {
+        const hasPro = await checkProEntitlement();
+        if (hasPro) {
+          const entitlement = resolveEntitlement('pro_monthly', 100);
+          set({ 
+            entitlement, 
+            isRestoring: false, 
+            billingMessage: 'Purchases successfully restored via RevenueCat!' 
+          });
+          return { success: true, restored: true, message: 'Purchases restored.' };
+        } else {
+          set({ 
+            isRestoring: false, 
+            billingMessage: 'No active RevenueCat entitlements found.' 
+          });
+          return { success: false, restored: false, message: 'No active entitlements found.' };
+        }
+      }
+
       const result = await executeRestorePurchases(user);
       if (result.success && result.entitlement) {
         set({ 
