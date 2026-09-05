@@ -2135,6 +2135,7 @@ var GooglePlayService = class _GooglePlayService {
 };
 
 // backend/controllers/billingController.ts
+var import_firestore5 = require("firebase/firestore");
 function handleGetPlans(_req, res) {
   res.json({
     plans: PLANS
@@ -2274,6 +2275,26 @@ async function handleSimulatePurchase(req, res) {
     usage
   });
 }
+async function handleGetPurchases(req, res) {
+  try {
+    const { userId, isGuest } = extractUserFromRequest(req);
+    if (isGuest || !userId || userId.startsWith("guest_")) {
+      res.json({ purchases: [] });
+      return;
+    }
+    const purchasesRef = (0, import_firestore5.collection)(serverDb, "users", userId, "purchases");
+    const q = (0, import_firestore5.query)(purchasesRef, (0, import_firestore5.orderBy)("purchasedAt", "desc"), (0, import_firestore5.limit)(50));
+    const snapshot = await (0, import_firestore5.getDocs)(q);
+    const purchases = [];
+    snapshot.forEach((docSnap) => {
+      purchases.push(docSnap.data());
+    });
+    res.json({ purchases });
+  } catch (error) {
+    console.warn("[BILLING] Error fetching purchase history:", error);
+    res.json({ purchases: [] });
+  }
+}
 
 // backend/routes.ts
 var apiRouter = (0, import_express.Router)();
@@ -2288,6 +2309,7 @@ apiRouter.get("/health", (_req, res) => {
 });
 apiRouter.get("/billing/plans", handleGetPlans);
 apiRouter.get("/billing/entitlement", handleGetEntitlement);
+apiRouter.get("/billing/purchases", handleGetPurchases);
 apiRouter.post("/billing/verify-play-purchase", handleVerifyPlayPurchase);
 apiRouter.post("/billing/restore-purchases", handleRestorePurchases);
 apiRouter.post("/billing/webhook/google-play", handleGooglePlayRtdnWebhook);
