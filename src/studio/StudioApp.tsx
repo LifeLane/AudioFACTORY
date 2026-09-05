@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * AudioFACTORY Studio Application Shell
  */
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { INTRO_STYLES, CUSTOM_STYLE, SUPPORTED_LANGUAGES } from '../../constants';
 import { IntroStyle, Voice, SavedAudioProject } from '../../types';
