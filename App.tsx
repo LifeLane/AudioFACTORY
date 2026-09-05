@@ -22,6 +22,11 @@ import { VoiceCloningModal } from './components/VoiceCloningModal';
 import { FirebaseProjectsModal } from './components/FirebaseProjectsModal';
 import { MonologueBentoStudio } from './components/MonologueBentoStudio';
 import { AudioProductionSuite } from './components/AudioProductionSuite';
+import { useTerminal } from './components/terminal/TerminalContext';
+import { TerminalBackgroundCanvas } from './components/terminal/TerminalBackgroundCanvas';
+import { TerminalHeader } from './components/terminal/TerminalHeader';
+import { TerminalMonologueView } from './components/terminal/TerminalMonologueView';
+import { TerminalDiagnosticDrawer } from './components/terminal/TerminalDiagnosticDrawer';
 import { BauhausButton, getIcon, getColorClass, DownloadIcon } from './components/BauhausComponents';
 import { useFirebase } from './services/firebaseContext';
 import { SavedAudioProject } from './types';
@@ -46,12 +51,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  X
+  X,
+  Monitor
 } from 'lucide-react';
 
 type StudioMode = 'intro' | 'multispeaker' | 'suite';
 
 const App: React.FC = () => {
+  // Terminal System Context
+  const { isTerminalMode, toggleTerminalMode, setIsAudioActive, addLog } = useTerminal();
+
   // Firebase State
   const { 
     user, 
@@ -371,6 +380,136 @@ const App: React.FC = () => {
 
   const currentLang = SUPPORTED_LANGUAGES[currentLangIndex];
 
+  // ==========================================
+  // GOOGLY TERMINAL WORKSPACE MODE
+  // ==========================================
+  if (isTerminalMode) {
+    return (
+      <div className="flex flex-col h-[100dvh] w-screen bg-[#0D1117] text-[#C9D1D9] overflow-hidden select-none font-mono relative">
+        {/* Retro-Futuristic Interactive Google Grid Canvas */}
+        <TerminalBackgroundCanvas />
+
+        {/* Tactical Terminal Header Bar */}
+        <TerminalHeader
+          activeMode={activeMode}
+          onModeChange={(m) => { stopPlayback(); setActiveMode(m); }}
+          onOpenProjectsModal={() => setIsCloudModalOpen(true)}
+          onOpenConfigModal={() => setIsConfigOpen(true)}
+          isPlaying={isPlaying}
+          isGenerating={isGenerating}
+          onToggleTheme={toggleTerminalMode}
+          isTerminalMode={isTerminalMode}
+        />
+
+        {/* Main Workstation Screen */}
+        <main className="flex-1 flex min-h-0 overflow-hidden relative z-10 pb-9">
+          {activeMode === 'intro' && (
+            <TerminalMonologueView
+              text={text}
+              onTextChange={(val) => {
+                setText(val);
+                setGeneratedAudio(null);
+              }}
+              selectedStyle={selectedStyle}
+              onSelectStyle={handleSelectStyle}
+              selectedVoice={selectedVoice}
+              onOpenVoiceConfig={() => setIsConfigOpen(true)}
+              isPlaying={isPlaying}
+              isLoading={isGenerating}
+              isDramatizing={isDramatizing}
+              generatedAudio={generatedAudio}
+              audioProgress={audioProgress}
+              audioDuration={audioDuration}
+              audioError={audioError}
+              onDismissError={() => setAudioError(null)}
+              onSynthesizeOrPlay={handleMainActionClick}
+              onDramatize={handleDramatize}
+              onSaveToCloud={handleSaveMonologueToCloud}
+              isSaving={isSaving}
+              justSaved={monologueJustSaved}
+              onDownloadWav={handleDownload}
+            />
+          )}
+
+          {activeMode === 'multispeaker' && (
+            <div className="flex-1 flex flex-col h-full bg-[#0D1117]/85 overflow-hidden">
+              <MultiSpeakerStudio 
+                onBgmOverlay={(buf) => setBgmBuffer(buf)} 
+                loadedProject={loadedMultiSpeakerProject}
+                onOpenCloudModal={() => setIsCloudModalOpen(true)}
+              />
+            </div>
+          )}
+
+          {activeMode === 'suite' && (
+            <div className="flex-1 flex flex-col h-full bg-[#0D1117]/85 overflow-hidden">
+              <AudioProductionSuite
+                onBgmBufferGenerated={(buf: AudioBuffer) => setBgmBuffer(buf)}
+                activeBgmBuffer={bgmBuffer}
+                onOpenVoiceCloning={() => setIsCloningOpen(true)}
+              />
+            </div>
+          )}
+        </main>
+
+        {/* Retractable Bottom Diagnostic Drawer & Interactive Shell */}
+        <TerminalDiagnosticDrawer 
+          onTriggerSynth={handleGenerateSpeech}
+          onTriggerPlay={handleMainActionClick}
+          onTriggerExport={handleDownload}
+        />
+
+        {/* Modals Shared with Bauhaus */}
+        <ConfigurationModal 
+          isOpen={isConfigOpen}
+          onClose={() => setIsConfigOpen(false)}
+          selectedVoice={selectedVoice}
+          onVoiceChange={(v) => {
+            setSelectedVoice(v);
+            setIsConfigOpen(false);
+          }}
+          voices={allAvailableVoices}
+        />
+
+        <SystemPromptModal 
+          isOpen={isPromptOpen}
+          onClose={() => setIsPromptOpen(false)}
+          prompt={selectedStyle.description}
+          isEditable={selectedStyle.id === 'custom'}
+          onSave={handleSaveCustom}
+          currentVoice={selectedVoice}
+          voices={allAvailableVoices}
+        />
+
+        <VoiceCloningModal 
+          isOpen={isCloningOpen}
+          onClose={() => setIsCloningOpen(false)}
+          onSuccess={() => {
+            getElevenLabsVoices().then(v => {
+              if (v && v.length > 0) setElevenLabsVoicesList(v);
+            });
+          }}
+        />
+
+        <FirebaseProjectsModal 
+          isOpen={isCloudModalOpen}
+          onClose={() => setIsCloudModalOpen(false)}
+          onLoadProject={(proj) => {
+            setLoadedMultiSpeakerProject(proj);
+            setActiveMode('multispeaker');
+            setIsCloudModalOpen(false);
+          }}
+          onLoadMonologue={(mono) => {
+            setText(mono.text);
+            if (mono.voice) setSelectedVoice(mono.voice);
+            setActiveMode('intro');
+            setIsCloudModalOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[100dvh] w-screen bg-[#F4F4F0] text-[#1A1A1A] overflow-hidden select-none font-sans">
       
@@ -478,6 +617,16 @@ const App: React.FC = () => {
             >
               <Mic className="w-3.5 h-3.5" />
               Clone
+            </button>
+
+            {/* Googly Terminal Switcher */}
+            <button
+              onClick={toggleTerminalMode}
+              className="flex items-center gap-1.5 border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 px-2.5 py-1.5 rounded-md text-xs font-mono font-bold shadow-xs transition-colors"
+              title="Launch Google Terminal (G-Term) Workstation"
+            >
+              <Monitor className="w-3.5 h-3.5 text-[#4285F4]" />
+              <span className="hidden sm:inline">G-Term</span>
             </button>
           </div>
 

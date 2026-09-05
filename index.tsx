@@ -8,6 +8,7 @@ import App from './App';
 import './index.css';
 import { FirebaseProvider } from './services/firebaseContext';
 import { LiveblocksProvider } from './services/liveblocksContext';
+import { TerminalProvider } from './components/terminal/TerminalContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -19,7 +20,9 @@ root.render(
   <React.StrictMode>
     <FirebaseProvider>
       <LiveblocksProvider>
-        <App />
+        <TerminalProvider>
+          <App />
+        </TerminalProvider>
       </LiveblocksProvider>
     </FirebaseProvider>
   </React.StrictMode>

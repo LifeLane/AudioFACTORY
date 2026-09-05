@@ -82,14 +82,22 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
  */
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
+    // Attempt to test server reachability
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. The client is offline.");
+  } catch (error: any) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = error?.code || '';
+    if (
+      errorCode === 'unavailable' ||
+      errorMsg.includes('the client is offline') || 
+      errorMsg.includes('unavailable') ||
+      errorMsg.includes('Could not reach Cloud Firestore backend')
+    ) {
+      console.warn("Firestore connection check: Operating in offline / local cache mode until server connection is established.");
       return false;
     }
-    // Expected to get a permission denied or not found on 'test/connection' when rules are restrictive
+    // Expected to get a permission-denied or not-found on 'test/connection' when rules are restrictive and backend is healthy
     return true;
   }
 }
