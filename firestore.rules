@@ -1,0 +1,86 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidAudioProject(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && (!('summary' in data) || (data.summary is string && data.summary.size() <= 1000))
+        && (!('format' in data) || (data.format is string && data.format.size() <= 100))
+        && (!('style' in data) || (data.style is string && data.style.size() <= 100))
+        && (!('speakerCount' in data) || data.speakerCount is number)
+        && (!('speakers' in data) || data.speakers is list)
+        && (!('lines' in data) || data.lines is list)
+        && data.userId is string && data.userId == request.auth.uid
+        && data.createdAt is string
+        && data.updatedAt is string;
+    }
+
+    function isValidAudioMonologue(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 8000
+        && (!('styleId' in data) || (data.styleId is string && data.styleId.size() <= 100))
+        && (!('voice' in data) || (data.voice is string && data.voice.size() <= 100))
+        && data.userId is string && data.userId == request.auth.uid
+        && data.createdAt is string
+        && data.updatedAt is string;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 200))
+        && (!('favoriteVoice' in data) || (data.favoriteVoice is string && data.favoriteVoice.size() <= 100))
+        && (!('defaultProvider' in data) || (data.defaultProvider in ['gemini', 'elevenlabs']))
+        && data.updatedAt is string;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+
+      match /projects/{projectId} {
+        allow get, delete: if isSignedIn() && request.auth.uid == userId && isValidId(projectId);
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(projectId) && isValidAudioProject(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(projectId) && isValidAudioProject(incoming())
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt;
+      }
+
+      match /monologues/{monologueId} {
+        allow get, delete: if isSignedIn() && request.auth.uid == userId && isValidId(monologueId);
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidId(monologueId) && isValidAudioMonologue(incoming());
+        allow update: if isSignedIn() && request.auth.uid == userId && isValidId(monologueId) && isValidAudioMonologue(incoming())
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt;
+      }
+
+      match /profile/{profileId} {
+        allow get: if isSignedIn() && request.auth.uid == userId;
+        allow create, update: if isSignedIn() && request.auth.uid == userId && isValidUserProfile(incoming());
+      }
+    }
+  }
+}

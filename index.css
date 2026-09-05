@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rose-600: #E94B35;
+  --color-sky-500: #2A6DB5;
+  --color-amber-400: #F2C94C;
+  --color-zinc-900: #1A1A1A;
+  --color-zinc-50: #F4F4F0;
+  --color-emerald-500: #74be70;
+  --color-bauhaus-red: #E94B35;
+  --color-bauhaus-blue: #2A6DB5;
+  --color-bauhaus-yellow: #F2C94C;
+  --color-bauhaus-black: #1A1A1A;
+  --color-bauhaus-white: #F4F4F0;
+  --color-bauhaus-green: #74be70;
+  --font-sans: 'Helvetica', 'Arial', sans-serif;
+}
+
+/* Global Styles */
+body {
+  background-color: #F4F4F0;
+  color: #1A1A1A;
+  font-family: var(--font-sans);
+}
+
+.shadow-hard {
+  box-shadow: 8px 8px 0px 0px #1A1A1A;
+}
+
+.shadow-hard-sm {
+  box-shadow: 4px 4px 0px 0px #1A1A1A;
+}
+
+.shadow-hard-xs {
+  box-shadow: 2px 2px 0px 0px #1A1A1A;
+}
+
+
+/* Custom Scrollbar for Bauhaus feel */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-zinc-50);
+  border-left: 2px solid var(--color-zinc-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-zinc-900);
+  border: 2px solid var(--color-zinc-50);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-rose-600);
+}
+
+/* Utility classes for hiding/showing scrollbars */
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Show scrollbar on hover */
+.hover-scrollbar:hover::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+.hover-scrollbar:hover::-webkit-scrollbar-track {
+   background: var(--color-zinc-50);
+}
+.hover-scrollbar:hover::-webkit-scrollbar-thumb {
+   background: var(--color-zinc-900);
+   border-radius: 4px;
+}
+.hover-scrollbar:hover {
+  scrollbar-width: thin;
+}

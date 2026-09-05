@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "audioProject": {
+      "title": "Audio Project",
+      "description": "Multi-speaker dialogue audio project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200, "description": "Project title" },
+        "summary": { "type": "string", "maxLength": 1000, "description": "Short project synopsis" },
+        "format": { "type": "string", "maxLength": 100, "description": "Script format" },
+        "style": { "type": "string", "maxLength": 100, "description": "Tone and style" },
+        "speakerCount": { "type": "number", "description": "Number of characters" },
+        "speakers": { "type": "array", "description": "List of speakers and voices" },
+        "lines": { "type": "array", "description": "Ordered dialogue lines" },
+        "userId": { "type": "string", "maxLength": 128, "description": "Owner user UID" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "userId", "createdAt", "updatedAt"]
+    },
+    "audioMonologue": {
+      "title": "Audio Monologue",
+      "description": "Single-voice speech or intro script",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200, "description": "Monologue title" },
+        "styleId": { "type": "string", "maxLength": 100, "description": "Intro style key" },
+        "voice": { "type": "string", "maxLength": 100, "description": "Voice identifier" },
+        "text": { "type": "string", "maxLength": 8000, "description": "Spoken monologue script" },
+        "userId": { "type": "string", "maxLength": 128, "description": "Owner user UID" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "text", "userId", "createdAt", "updatedAt"]
+    },
+    "userProfile": {
+      "title": "User Profile",
+      "description": "User preferences and audio studio defaults",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 200 },
+        "favoriteVoice": { "type": "string", "maxLength": 100 },
+        "defaultProvider": { "type": "string", "enum": ["gemini", "elevenlabs"] },
+        "userId": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "audioProject",
+      "description": "User's saved multi-speaker audio projects"
+    },
+    "/users/{userId}/monologues/{monologueId}": {
+      "schema": "audioMonologue",
+      "description": "User's saved monologue scripts and audio presets"
+    },
+    "/users/{userId}/profile/main": {
+      "schema": "userProfile",
+      "description": "User profile and studio preferences"
+    }
+  }
+}
