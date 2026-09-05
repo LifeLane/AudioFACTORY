@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { FirebaseProvider } from './services/firebaseContext';
+import { LiveblocksProvider } from './services/liveblocksContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,7 +18,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <FirebaseProvider>
-      <App />
+      <LiveblocksProvider>
+        <App />
+      </LiveblocksProvider>
     </FirebaseProvider>
   </React.StrictMode>
 );

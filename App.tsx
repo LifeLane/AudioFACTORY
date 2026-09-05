@@ -20,6 +20,8 @@ import { MultiSpeakerStudio } from './components/MultiSpeakerStudio';
 import { BgmGenerator } from './components/BgmGenerator';
 import { VoiceCloningModal } from './components/VoiceCloningModal';
 import { FirebaseProjectsModal } from './components/FirebaseProjectsModal';
+import { MonologueBentoStudio } from './components/MonologueBentoStudio';
+import { AudioProductionSuite } from './components/AudioProductionSuite';
 import { BauhausButton, getIcon, getColorClass, DownloadIcon } from './components/BauhausComponents';
 import { useFirebase } from './services/firebaseContext';
 import { SavedAudioProject } from './types';
@@ -612,258 +614,39 @@ const App: React.FC = () => {
               )}
             </aside>
 
-            {/* Right Column: Studio Workspace with KEY CONTROLS ON TOP */}
-            <div className="flex-1 flex flex-col bg-[#F7F7F4] min-w-0 overflow-hidden">
-              
-              {/* KEY CONTROL COMMAND STATION (STICKY ON TOP) */}
-              <div className="border-b border-zinc-200 bg-white shadow-studio flex-shrink-0 z-20">
-                
-                {/* Row 1: Primary Controls & Key Actions */}
-                <div className="p-3 sm:p-4 md:px-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                  
-                  {/* Left: Tactical Primary Synthesis / Play Button + Status Telemetry */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={handleMainActionClick}
-                      disabled={isGenerating || !text.trim()}
-                      className={`h-11 sm:h-12 px-4 sm:px-5 rounded-lg font-mono text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-tactile active:scale-98 flex-shrink-0 ${
-                        isGenerating
-                          ? 'bg-amber-400 border border-amber-500 text-zinc-950 cursor-wait'
-                          : isPlaying
-                          ? 'bg-rose-600 hover:bg-rose-500 border border-rose-700 text-white animate-pulse'
-                          : generatedAudio
-                          ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-700 text-white'
-                          : 'bg-zinc-950 hover:bg-zinc-800 border border-zinc-950 text-white disabled:opacity-50'
-                      }`}
-                      aria-label={isPlaying ? 'Pause Audio' : isGenerating ? 'Synthesizing...' : 'Generate and Play'}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-                          <span>SYNTHESIZING</span>
-                        </>
-                      ) : isPlaying ? (
-                        <>
-                          <Pause className="w-4 h-4 fill-current" />
-                          <span>PAUSE</span>
-                        </>
-                      ) : generatedAudio ? (
-                        <>
-                          <Play className="w-4 h-4 fill-current" />
-                          <span>REPLAY</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 fill-current" />
-                          <span>SYNTHESIZE</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Telemetry Status & Duration */}
-                    <div className="flex flex-col justify-center min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${
-                          isGenerating 
-                            ? 'bg-amber-500 animate-ping' 
-                            : isPlaying 
-                            ? 'bg-rose-500 animate-pulse' 
-                            : generatedAudio 
-                            ? 'bg-emerald-500' 
-                            : 'bg-zinc-400'
-                        }`} />
-                        <span className="text-[10px] font-mono uppercase font-bold tracking-wider text-zinc-600 truncate">
-                          {isGenerating ? 'Neural Processing' : isPlaying ? 'On Air' : generatedAudio ? 'Audio Ready' : 'Standby'}
-                        </span>
-                      </div>
-                      <div className="text-xs font-mono font-bold text-zinc-800 truncate">
-                        {audioDuration > 0 ? `${audioDuration.toFixed(1)}s audio` : `${text.length} chars`}
-                        {generatedAudio && (
-                          <span className="text-[10px] font-medium text-emerald-600 ml-1.5">
-                            ✓ 24kHz
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Persona Quick-Select, AI Dramatize, Cloud & WAV Export */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-between sm:justify-end">
-                    
-                    {/* Active Persona Chip (Opens sheet on mobile, reveals sidebar on desktop) */}
-                    <button
-                      onClick={() => {
-                        if (window.innerWidth < 768) {
-                          setIsMobilePersonaDrawerOpen(true);
-                        } else {
-                          setIsMonologueSidebarOpen(true);
-                        }
-                      }}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-900 transition-colors shadow-2xs"
-                      title="Switch Speaker Persona"
-                    >
-                      <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${getColorClass(selectedStyle.color, true)}`}>
-                        {getIcon(selectedStyle.icon, "w-3 h-3 text-white")}
-                      </div>
-                      <div className="text-left">
-                        <div className="text-[11px] font-mono font-bold truncate max-w-[100px] sm:max-w-[130px]">
-                          {selectedStyle.name}
-                        </div>
-                        <div className="text-[9px] font-mono text-zinc-500 truncate">
-                          {selectedVoice}
-                        </div>
-                      </div>
-                      <ChevronDown className="w-3 h-3 text-zinc-400" />
-                    </button>
-
-                    {/* Voice Config trigger */}
-                    <button
-                      onClick={() => setIsConfigOpen(true)}
-                      className="p-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-950 shadow-2xs transition-colors"
-                      title="Change Voice Profile"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* AI Dramatize Button */}
-                    <button
-                      onClick={handleDramatize}
-                      disabled={isDramatizing || !text.trim()}
-                      className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-2xs ${
-                        isDramatizing 
-                          ? 'bg-amber-100 text-amber-900 border-amber-300' 
-                          : 'bg-white hover:bg-amber-50 text-amber-900 border-amber-300'
-                      }`}
-                      title="Dramatize script with Gemini AI"
-                    >
-                      <Sparkles className={`w-3.5 h-3.5 text-amber-600 ${isDramatizing ? 'animate-spin' : ''}`} />
-                      <span className="hidden xs:inline">Dramatize</span>
-                      <span className="xs:hidden">AI</span>
-                    </button>
-
-                    {/* Save Script to Cloud */}
-                    <button
-                      onClick={handleSaveMonologueToCloud}
-                      disabled={isSaving || !text.trim()}
-                      className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border text-xs font-mono font-bold uppercase flex items-center gap-1.5 transition-all shadow-2xs ${
-                        monologueJustSaved 
-                          ? 'bg-emerald-600 text-white border-emerald-700' 
-                          : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-200'
-                      }`}
-                      title="Save monologue script to Firebase"
-                    >
-                      {monologueJustSaved ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Cloud className="w-3.5 h-3.5 text-sky-600" />}
-                      <span className="hidden sm:inline">{monologueJustSaved ? 'Saved' : 'Save'}</span>
-                    </button>
-
-                    {/* Download WAV Button */}
-                    <button
-                      onClick={handleDownload}
-                      disabled={!generatedAudio}
-                      className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-sky-600 bg-sky-600 hover:bg-sky-500 disabled:opacity-40 disabled:hover:bg-sky-600 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-2xs"
-                      title="Download 24kHz broadcast WAV"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">WAV</span>
-                    </button>
-
-                  </div>
-
-                </div>
-
-                {/* Row 2: Live Waveform Visualizer & Playhead Scrubber */}
-                <div className="px-3 py-2 sm:px-4 md:px-6 bg-zinc-50 border-t border-zinc-200 flex items-center gap-3">
-                  <div className="text-[10px] font-mono text-zinc-500 uppercase font-bold flex-shrink-0">
-                    Waveform: {(audioProgress * 100).toFixed(0)}%
-                  </div>
-                  <div className="flex-1 flex items-end gap-0.5 sm:gap-1 h-5 bg-white border border-zinc-200 rounded px-1.5 py-0.5 overflow-hidden">
-                    {[14, 28, 20, 36, 24, 18, 32, 26, 18, 30, 16, 22, 28, 20, 26, 36, 18, 24, 32, 20, 28, 34, 22, 16, 30, 24, 18, 28].map((h, i) => (
-                      <div
-                        key={i}
-                        style={{ height: `${Math.min(100, Math.max(15, h * (isPlaying ? 1.2 : 0.6)))}%` }}
-                        className={`flex-1 rounded-2xs transition-all ${
-                          audioProgress > (i / 28) ? 'bg-rose-600' : 'bg-zinc-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  {audioDuration > 0 && (
-                    <div className="text-[10px] font-mono text-zinc-500 flex-shrink-0">
-                      {(audioProgress * audioDuration).toFixed(1)}s / {audioDuration.toFixed(1)}s
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
-              {/* Error Notice */}
-              {audioError && (
-                <div className="m-3 md:m-4 p-3 rounded-md border border-rose-200 bg-rose-50 text-rose-800 font-mono text-xs flex justify-between items-center z-10 flex-shrink-0">
-                  <span>{audioError}</span>
-                  <button onClick={() => setAudioError(null)} className="font-bold text-rose-700 ml-4">✕</button>
-                </div>
-              )}
-
-              {/* Script Editor Canvas (Directly below Key Controls) */}
-              <div className="flex-1 flex flex-col p-3 sm:p-4 md:p-6 min-h-0 overflow-hidden">
-                
-                <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <label className="font-mono text-xs uppercase tracking-wider font-bold text-zinc-800">
-                      Spoken Script / Introduction
-                    </label>
-                    <button 
-                      onClick={() => setIsPromptOpen(true)}
-                      className="text-zinc-400 hover:text-zinc-700 transition-colors"
-                      title="View prompt instructions"
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setText(selectedStyle.templateText);
-                        setGeneratedAudio(null);
-                      }}
-                      className="text-[11px] font-mono text-zinc-500 hover:text-zinc-900 transition-colors"
-                      title="Reset to persona default script"
-                    >
-                      Reset Template
-                    </button>
-                    <span className="text-zinc-300">|</span>
-                    <button
-                      onClick={() => {
-                        setText('');
-                        setGeneratedAudio(null);
-                      }}
-                      className="text-[11px] font-mono text-zinc-500 hover:text-rose-600 transition-colors"
-                      title="Clear script"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                <textarea
-                  value={text}
-                  onChange={(e) => {
-                    setText(e.target.value);
-                    setGeneratedAudio(null);
-                  }}
-                  className="w-full flex-1 p-3.5 sm:p-5 md:p-6 rounded-lg border border-zinc-200 font-mono text-xs sm:text-sm md:text-base leading-relaxed bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-studio resize-none overflow-y-auto custom-scrollbar"
-                  placeholder="Type or paste your meeting intro or speech here..."
-                />
-
-                <div className="mt-2 flex items-center justify-between text-[11px] font-mono text-zinc-500 flex-shrink-0">
-                  <span>💡 Tip: Add commas or ellipses (...) for natural speech pauses.</span>
-                  <span>{text.length} characters</span>
-                </div>
-
-              </div>
-
-            </div>
+            {/* Right Column: Studio Workspace as Bento Grid */}
+            <MonologueBentoStudio
+              text={text}
+              onTextChange={(val) => {
+                setText(val);
+                setGeneratedAudio(null);
+              }}
+              selectedStyle={selectedStyle}
+              selectedVoice={selectedVoice}
+              onOpenPersonaSelect={() => {
+                if (window.innerWidth < 768) {
+                  setIsMobilePersonaDrawerOpen(true);
+                } else {
+                  setIsMonologueSidebarOpen(true);
+                }
+              }}
+              onOpenVoiceConfig={() => setIsConfigOpen(true)}
+              onOpenPromptModal={() => setIsPromptOpen(true)}
+              isPlaying={isPlaying}
+              isLoading={isGenerating}
+              isDramatizing={isDramatizing}
+              generatedAudio={generatedAudio}
+              audioProgress={audioProgress}
+              audioDuration={audioDuration}
+              audioError={audioError}
+              onDismissError={() => setAudioError(null)}
+              onSynthesizeOrPlay={handleMainActionClick}
+              onDramatize={handleDramatize}
+              onSaveToCloud={handleSaveMonologueToCloud}
+              isSaving={isSaving}
+              justSaved={monologueJustSaved}
+              onDownloadWav={handleDownload}
+            />
 
           </div>
         )}
@@ -877,60 +660,13 @@ const App: React.FC = () => {
           />
         )}
 
-        {/* MODE 3: AUDIO SUITE & CLONING */}
+        {/* MODE 3: AUDIO SUITE & CLONING (BENTO GRID) */}
         {activeMode === 'suite' && (
-          <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-6 bg-[#F7F7F4]">
-            <div className="border border-zinc-200 bg-white p-6 rounded-lg shadow-studio">
-              <h1 className="text-2xl font-bold uppercase text-zinc-900 mb-1">
-                Audio Production Suite
-              </h1>
-              <p className="text-xs font-mono text-zinc-600">
-                Generate background music tracks, synthesize custom voice clones, and manage studio assets.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* BGM Generator */}
-              <div className="border border-zinc-200 bg-white p-6 rounded-lg shadow-studio space-y-4">
-                <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
-                  <Music className="w-5 h-5 text-amber-500" />
-                  <h2 className="text-base font-bold uppercase text-zinc-900">
-                    Background Music (BGM) Generator
-                  </h2>
-                </div>
-                <p className="text-xs font-mono text-zinc-600">
-                  Generate cinematic loops, ambient synth beds, and corporate podcast stingers using ElevenLabs audio soundscapes.
-                </p>
-                <BgmGenerator onBgmGenerated={(buf) => {
-                  const ctx = getAudioContext();
-                  ctx.decodeAudioData(buf.slice(0)).then(decoded => {
-                    setBgmBuffer(decoded);
-                  });
-                }} />
-              </div>
-
-              {/* Voice Cloning Studio */}
-              <div className="border border-zinc-200 bg-white p-6 rounded-lg shadow-studio space-y-4">
-                <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
-                  <Mic className="w-5 h-5 text-rose-600" />
-                  <h2 className="text-base font-bold uppercase text-zinc-900">
-                    Instant Voice Cloning Studio
-                  </h2>
-                </div>
-                <p className="text-xs font-mono text-zinc-600">
-                  Clone your own voice by recording a 30-second audio snippet or uploading an audio file. Cloned voices can be assigned to characters in the Multi-Speaker studio.
-                </p>
-                <div className="pt-2">
-                  <button
-                    onClick={() => setIsCloningOpen(true)}
-                    className="w-full border border-rose-700 bg-rose-600 hover:bg-rose-500 text-white p-3.5 rounded-lg font-mono font-bold uppercase tracking-wider text-xs shadow-tactile flex items-center justify-center gap-2.5 transition-colors"
-                  >
-                    <Mic className="w-4 h-4" /> Launch Voice Cloning Wizard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <AudioProductionSuite
+            onBgmBufferGenerated={(buf: AudioBuffer) => setBgmBuffer(buf)}
+            activeBgmBuffer={bgmBuffer}
+            onOpenVoiceCloning={() => setIsCloningOpen(true)}
+          />
         )}
 
       </main>

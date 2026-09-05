@@ -40,6 +40,8 @@ import {
 } from '../services/elevenLabsService';
 import { BauhausButton } from './BauhausComponents';
 import { useFirebase } from '../services/firebaseContext';
+import { useLiveblocks } from '../services/liveblocksContext';
+import { LivePresenceBar } from './LivePresenceBar';
 
 interface MultiSpeakerStudioProps {
   onBgmOverlay?: (buffer: AudioBuffer) => void;
@@ -102,6 +104,7 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   loadedProject,
 }) => {
   const { savedProjects, saveProjectToCloud, isSaving } = useFirebase();
+  const { collaborators, broadcastAudioPlay, setActiveEditingLine } = useLiveblocks();
   const [justSaved, setJustSaved] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
 
@@ -274,6 +277,13 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
     source.start(0);
     setActiveAudioSource(source);
     setPlayingLineId(lineId);
+
+    // Broadcast live playing line to Liveblocks room
+    const targetLineIndex = lines.findIndex(l => l.id === lineId);
+    const targetLine = lines[targetLineIndex];
+    if (targetLine) {
+      broadcastAudioPlay(targetLine.speaker, targetLineIndex);
+    }
   };
 
   // Generate audio for one line
@@ -630,6 +640,18 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
             </button>
           )}
 
+          {/* Key Control on Top: Export WAV */}
+          <button
+            onClick={handleDownloadCombinedWav}
+            disabled={readyCount === 0 || isBatchGenerating}
+            className="px-2.5 py-1.5 rounded-md text-xs font-mono font-bold border border-emerald-600 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white flex items-center gap-1.5 shadow-xs"
+            title="Export Master continuous WAV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export WAV</span>
+            <span className="sm:hidden">WAV</span>
+          </button>
+
           <div className="h-4 w-[1px] bg-zinc-200 hidden sm:block mx-0.5" />
 
           <button
@@ -688,6 +710,11 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
             </button>
           )}
         </div>
+      </div>
+
+      {/* Liveblocks Collaborative Room Presence Bar */}
+      <div className="px-3 sm:px-6 py-1.5 bg-zinc-100 border-b border-zinc-200 flex-shrink-0">
+        <LivePresenceBar />
       </div>
 
       {/* MOBILE SEGMENTED CONTROL TABS (< md) */}
@@ -1369,64 +1396,29 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
         </main>
       </div>
 
-      {/* 3. PERSISTENT DOCKED STUDIO TRANSPORT CONSOLE (Fixed at Bottom) */}
-      <footer className="border-t border-zinc-300 bg-white px-4 md:px-8 py-3 flex-shrink-0 flex flex-col md:flex-row items-center justify-between gap-3 shadow-studio-lg z-30">
-        
-        {/* Left: Master Play / Stop Sequence Controls */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={() => {
-              if (isPlayingFullSequence) {
-                stopCurrentPlayback();
-              } else {
-                handlePlayFullScene();
-              }
-            }}
-            disabled={readyCount === 0 || isBatchGenerating}
-            className={`px-4 py-2 rounded-md font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm ${
-              isPlayingFullSequence 
-                ? 'bg-rose-600 hover:bg-rose-500 text-white border border-rose-700' 
-                : 'bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-950 disabled:opacity-50'
-            }`}
-          >
-            {isPlayingFullSequence ? (
-              <>
-                <Square className="w-3.5 h-3.5 fill-current" /> Stop Scene
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" /> Play Full Scene
-              </>
-            )}
-          </button>
-
-          {/* Current Speaker / Status readout */}
-          <div className="min-w-0">
-            {isPlayingFullSequence && currentSpeakingLine ? (
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                <span className="text-xs font-mono font-bold text-zinc-900 truncate">
-                  Speaking: {currentSpeakingLine.speaker}
-                </span>
-              </div>
-            ) : isBatchGenerating ? (
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-3 h-3 animate-spin text-sky-600" />
-                <span className="text-xs font-mono text-sky-700">
-                  Synthesizing {batchProgress.current}/{batchProgress.total}...
-                </span>
-              </div>
-            ) : (
-              <div className="text-xs font-mono text-zinc-500">
-                Ready: <strong className="text-zinc-800">{readyCount}</strong> of {lines.length} turns
-              </div>
-            )}
-          </div>
+      {/* 3. SLEEK BENTO TIMELINE RIBBON (Compact Scrubber) */}
+      <footer className="border-t border-zinc-200 bg-white px-3 sm:px-6 py-2 flex-shrink-0 flex items-center justify-between gap-3 shadow-xs z-30">
+        <div className="flex items-center gap-2 min-w-0">
+          {isPlayingFullSequence && currentSpeakingLine ? (
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              <span className="truncate">Live: {currentSpeakingLine.speaker}</span>
+            </div>
+          ) : isBatchGenerating ? (
+            <div className="flex items-center gap-1.5 text-xs font-mono text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+              <RefreshCw className="w-3 h-3 animate-spin text-sky-600" />
+              <span>Batch {batchProgress.current}/{batchProgress.total}</span>
+            </div>
+          ) : (
+            <span className="text-xs font-mono text-zinc-500 hidden sm:inline">
+              Ready: <strong className="text-zinc-800">{readyCount}</strong>/{lines.length} turns
+            </span>
+          )}
         </div>
 
-        {/* Center: Interactive Multi-Segment Timeline Scrubber */}
-        <div className="w-full md:max-w-md flex flex-col gap-1">
-          <div className="flex items-center gap-1 h-3 bg-zinc-100 rounded p-0.5 border border-zinc-200 overflow-hidden">
+        {/* Center Interactive Timeline Scrubber */}
+        <div className="flex-1 max-w-md flex flex-col gap-0.5">
+          <div className="flex items-center gap-1 h-3.5 bg-zinc-100 rounded p-0.5 border border-zinc-200 overflow-hidden">
             {lines.map((line, i) => {
               const isPlaying = playingLineId === line.id;
               const isReady = line.status === 'ready';
@@ -1452,39 +1444,11 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
               );
             })}
           </div>
-          <div className="flex justify-between text-[9px] font-mono text-zinc-400 px-0.5">
-            <span>Scene Start</span>
-            <span>Click any bar to preview turn</span>
-            <span>Scene End</span>
-          </div>
         </div>
 
-        {/* Right: Master Batch & Export Controls */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-          <button
-            onClick={handleGenerateAllLines}
-            disabled={isBatchGenerating}
-            className="px-3 py-2 rounded-md border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-mono font-medium text-zinc-800 flex items-center gap-1.5 transition-colors disabled:opacity-50"
-          >
-            {isBatchGenerating ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-600" />
-            ) : (
-              <FastForward className="w-3.5 h-3.5 text-zinc-600" />
-            )}
-            <span>{readyCount === lines.length ? 'Regenerate All' : 'Generate All'}</span>
-          </button>
-
-          <button
-            onClick={handleDownloadCombinedWav}
-            disabled={readyCount === 0 || isBatchGenerating}
-            className="px-3.5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
-            title="Download full continuous dialogue WAV file"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export WAV</span>
-          </button>
+        <div className="text-[11px] font-mono text-zinc-500 hidden sm:block">
+          Audition bar
         </div>
-
       </footer>
 
     </div>

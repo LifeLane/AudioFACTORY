@@ -13,7 +13,8 @@ import {
   X,
   Layers,
   Radio,
-  ExternalLink
+  ExternalLink,
+  Database
 } from 'lucide-react';
 import { useFirebase } from '../services/firebaseContext';
 import { SavedAudioProject, SavedMonologue } from '../types';
@@ -74,21 +75,26 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-[#F4F4F0] border-4 border-[#1A1A1A] w-full max-w-3xl max-h-[85vh] flex flex-col shadow-hard animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="p-4 md:p-6 bg-white border-b-4 border-[#1A1A1A] flex items-center justify-between">
+        <div className="p-4 sm:p-5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sky-500 border-2 border-[#1A1A1A] flex items-center justify-center text-white shadow-hard-xs">
-              <Cloud className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-lg bg-sky-600 text-white flex items-center justify-center shadow-xs">
+              <Cloud className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg md:text-xl font-black uppercase text-[#1A1A1A] tracking-tight">
-                  Firebase Cloud Projects
+                <h2 className="text-base sm:text-lg font-bold text-zinc-900">
+                  Firebase Cloud Projects Vault
                 </h2>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase border border-[#1A1A1A] ${isOnline ? 'bg-emerald-400 text-emerald-950' : 'bg-rose-400 text-rose-950'}`}>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full border ${
+                  isOnline 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                   {isOnline ? 'Firestore Live' : 'Offline'}
                 </span>
               </div>
@@ -100,26 +106,26 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 border-2 border-[#1A1A1A] bg-white hover:bg-zinc-200 text-[#1A1A1A] transition-transform active:translate-x-0.5 active:translate-y-0.5"
+            className="w-9 h-9 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 flex items-center justify-center transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* User Account / Auth Bar */}
-        <div className="px-6 py-3 bg-[#EAEAE2] border-b-2 border-[#1A1A1A] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+        <div className="px-4 sm:px-6 py-2.5 bg-zinc-100 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
           <div className="flex items-center gap-2">
-            <UserIcon className="w-4 h-4 text-zinc-700" />
+            <UserIcon className="w-3.5 h-3.5 text-zinc-600" />
             {authLoading ? (
               <span className="text-zinc-500 animate-pulse">Connecting to Firebase Auth...</span>
             ) : user ? (
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-[#1A1A1A]">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-zinc-900">
                   {user.displayName || user.email || (user.isAnonymous ? 'Guest Creator' : 'Authenticated User')}
                 </span>
                 {user.isAnonymous && (
-                  <span className="bg-amber-300 text-amber-950 text-[10px] px-1.5 py-0.5 border border-[#1A1A1A] font-bold">
-                    Guest Mode
+                  <span className="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded border border-amber-200">
+                    Anonymous
                   </span>
                 )}
               </div>
@@ -129,52 +135,42 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {!user ? (
-              <>
+            {user ? (
+              <button
+                onClick={logout}
+                className="px-2.5 py-1 rounded bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-800 flex items-center gap-1 font-mono text-[11px] font-bold transition-colors"
+              >
+                <LogOut className="w-3 h-3 text-zinc-600" />
+                Sign Out
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
                 <button
                   onClick={loginGuest}
-                  className="px-3 py-1 bg-white border-2 border-[#1A1A1A] hover:bg-zinc-100 font-bold uppercase text-[11px] shadow-hard-xs"
+                  className="px-2.5 py-1 rounded bg-white hover:bg-zinc-200 border border-zinc-300 text-zinc-800 font-mono text-[11px] font-bold transition-colors"
                 >
                   Guest Mode
                 </button>
                 <button
                   onClick={loginGoogle}
-                  className="px-3 py-1 bg-amber-400 border-2 border-[#1A1A1A] hover:bg-amber-300 font-bold uppercase text-[11px] shadow-hard-xs flex items-center gap-1.5"
+                  className="px-2.5 py-1 rounded bg-amber-400 hover:bg-amber-300 border border-amber-500 text-zinc-950 flex items-center gap-1 font-mono text-[11px] font-bold shadow-xs transition-colors"
                 >
-                  <LogIn className="w-3.5 h-3.5" />
+                  <LogIn className="w-3 h-3 text-zinc-950" />
                   Sign In with Google
                 </button>
-              </>
-            ) : (
-              <>
-                {user.isAnonymous && (
-                  <button
-                    onClick={loginGoogle}
-                    className="px-3 py-1 bg-amber-400 border-2 border-[#1A1A1A] hover:bg-amber-300 font-bold uppercase text-[11px] shadow-hard-xs flex items-center gap-1"
-                  >
-                    Link Google Account
-                  </button>
-                )}
-                <button
-                  onClick={logout}
-                  className="px-2.5 py-1 bg-white border-2 border-[#1A1A1A] hover:bg-rose-100 text-rose-700 font-bold uppercase text-[11px] shadow-hard-xs flex items-center gap-1"
-                >
-                  <LogOut className="w-3 h-3" />
-                  Sign Out
-                </button>
-              </>
+              </div>
             )}
           </div>
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border-b-2 border-[#1A1A1A] bg-white px-6 pt-3 gap-2">
+        <div className="flex border-b border-zinc-200 bg-white px-4 sm:px-6 pt-3 gap-2">
           <button
             onClick={() => setActiveTab('scenes')}
-            className={`px-4 py-2 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 border-t-2 border-x-2 border-[#1A1A1A] transition-colors ${
+            className={`pb-2.5 px-3 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'scenes'
-                ? 'bg-rose-600 text-white -mb-[2px] pb-[10px]'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                ? 'border-rose-600 text-rose-600'
+                : 'border-transparent text-zinc-500 hover:text-zinc-900'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -182,10 +178,10 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('monologues')}
-            className={`px-4 py-2 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 border-t-2 border-x-2 border-[#1A1A1A] transition-colors ${
+            className={`pb-2.5 px-3 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'monologues'
-                ? 'bg-[#1A1A1A] text-white -mb-[2px] pb-[10px]'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-zinc-500 hover:text-zinc-900'
             }`}
           >
             <Radio className="w-3.5 h-3.5" />
@@ -194,161 +190,133 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar min-h-[260px]">
-          {activeTab === 'scenes' && (
-            <div>
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto bg-zinc-50/50">
+          {activeTab === 'scenes' ? (
+            <div className="space-y-2.5">
               {savedProjects.length === 0 ? (
-                <div className="border-2 border-dashed border-zinc-400 p-8 text-center bg-white space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <div className="text-center py-12 border-2 border-dashed border-zinc-200 rounded-xl bg-white p-6">
+                  <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
                     <Layers className="w-6 h-6" />
                   </div>
-                  <h3 className="font-mono font-bold uppercase text-sm text-[#1A1A1A]">
+                  <h3 className="font-mono font-bold text-sm text-zinc-800 uppercase tracking-wide">
                     No Saved Multi-Speaker Scenes Yet
                   </h3>
-                  <p className="text-xs font-mono text-zinc-500 max-w-md mx-auto">
-                    Generate or analyze a multi-speaker script in the Multi-Speaker Studio, then click "Save to Firebase" to store it permanently in the cloud.
+                  <p className="text-xs text-zinc-500 font-mono mt-1 max-w-sm mx-auto">
+                    Generate or edit a multi-speaker script in the Multi-Speaker Studio, then click "Save to Firebase" to store it permanently in the cloud.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {savedProjects.map((p) => (
-                    <div
-                      key={p.id}
-                      className="border-2 border-[#1A1A1A] bg-white p-4 shadow-hard-xs hover:border-rose-600 transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-mono uppercase bg-zinc-200 px-1.5 py-0.5 font-bold">
-                            {p.format || 'Dialogue'}
-                          </span>
-                          <span className="text-[10px] font-mono text-zinc-400">
-                            {new Date(p.updatedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-sm text-[#1A1A1A] uppercase tracking-tight line-clamp-1">
-                          {p.title}
-                        </h4>
-                        <p className="text-xs font-mono text-zinc-500 mt-1 line-clamp-2">
-                          {p.summary || `${p.lines?.length || 0} lines across ${p.speakers?.length || 0} speakers.`}
-                        </p>
-
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {p.speakers?.slice(0, 4).map((s, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[10px] font-mono bg-zinc-100 border border-zinc-300 px-1.5 py-0.2 rounded-xs"
-                            >
-                              {s.name} ({s.voice})
-                            </span>
-                          ))}
-                          {p.speakers && p.speakers.length > 4 && (
-                            <span className="text-[10px] font-mono text-zinc-400">+{p.speakers.length - 4}</span>
-                          )}
-                        </div>
+                savedProjects.map((proj) => (
+                  <div
+                    key={proj.id}
+                    onClick={() => { onLoadProject(proj); onClose(); }}
+                    className="p-3.5 bg-white hover:bg-zinc-50 border border-zinc-200 hover:border-zinc-300 rounded-xl flex items-center justify-between cursor-pointer transition-all shadow-2xs group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center flex-shrink-0 font-mono font-bold text-xs">
+                        {proj.lines?.length || 0}L
                       </div>
-
-                      <div className="mt-4 pt-3 border-t border-zinc-200 flex items-center justify-between">
-                        <button
-                          onClick={() => {
-                            onLoadProject(p);
-                            onClose();
-                          }}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-mono text-xs font-bold uppercase flex items-center gap-1.5 border border-[#1A1A1A] shadow-hard-xs"
-                        >
-                          <FolderOpen className="w-3.5 h-3.5" />
-                          Open Project
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteProject(p.id, e)}
-                          disabled={deletingId === p.id}
-                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-300 transition-colors"
-                          title="Delete from Firebase"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-zinc-900 truncate group-hover:text-rose-600 transition-colors">
+                          {proj.title}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mt-0.5">
+                          <span>{proj.speakers?.length || 0} actors</span>
+                          <span>•</span>
+                          <span>{proj.updatedAt ? new Date(proj.updatedAt).toLocaleDateString() : 'Recent'}</span>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={(e) => handleDeleteProject(proj.id, e)}
+                        disabled={deletingId === proj.id}
+                        className="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Delete project"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { onLoadProject(proj); onClose(); }}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-900 group-hover:bg-rose-600 text-white font-mono text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
-          )}
-
-          {activeTab === 'monologues' && (
-            <div>
+          ) : (
+            <div className="space-y-2.5">
               {savedMonologues.length === 0 ? (
-                <div className="border-2 border-dashed border-zinc-400 p-8 text-center bg-white space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+                <div className="text-center py-12 border-2 border-dashed border-zinc-200 rounded-xl bg-white p-6">
+                  <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3">
                     <Radio className="w-6 h-6" />
                   </div>
-                  <h3 className="font-mono font-bold uppercase text-sm text-[#1A1A1A]">
+                  <h3 className="font-mono font-bold text-sm text-zinc-800 uppercase tracking-wide">
                     No Saved Monologues Yet
                   </h3>
-                  <p className="text-xs font-mono text-zinc-500 max-w-md mx-auto">
-                    Customize your intro script or monologue in the Intro Studio, then click "Save Script to Firebase".
+                  <p className="text-xs text-zinc-500 font-mono mt-1 max-w-sm mx-auto">
+                    Compose a monologue or meeting introduction, then click "Save" in the top action bar to store it in the cloud.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {savedMonologues.map((m) => (
-                    <div
-                      key={m.id}
-                      className="border-2 border-[#1A1A1A] bg-white p-4 shadow-hard-xs hover:border-amber-500 transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-mono uppercase bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 font-bold">
-                            Voice: {m.voice || 'Gemini'}
-                          </span>
-                          <span className="text-[10px] font-mono text-zinc-400">
-                            {new Date(m.updatedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <h4 className="font-bold text-sm text-[#1A1A1A] uppercase tracking-tight line-clamp-1">
-                          {m.title}
-                        </h4>
-                        <p className="text-xs font-mono text-zinc-600 mt-1 line-clamp-3 bg-zinc-50 p-2 border border-zinc-200 italic">
-                          "{m.text}"
-                        </p>
+                savedMonologues.map((mono) => (
+                  <div
+                    key={mono.id}
+                    onClick={() => { onLoadMonologue(mono); onClose(); }}
+                    className="p-3.5 bg-white hover:bg-zinc-50 border border-zinc-200 hover:border-zinc-300 rounded-xl flex items-center justify-between cursor-pointer transition-all shadow-2xs group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center flex-shrink-0 font-mono font-bold text-xs">
+                        🎙️
                       </div>
-
-                      <div className="mt-4 pt-3 border-t border-zinc-200 flex items-center justify-between">
-                        <button
-                          onClick={() => {
-                            onLoadMonologue(m);
-                            onClose();
-                          }}
-                          className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-zinc-800 text-white font-mono text-xs font-bold uppercase flex items-center gap-1.5 border border-[#1A1A1A] shadow-hard-xs"
-                        >
-                          <FolderOpen className="w-3.5 h-3.5" />
-                          Load Script
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteMonologue(m.id, e)}
-                          disabled={deletingId === m.id}
-                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-300 transition-colors"
-                          title="Delete from Firebase"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-zinc-900 truncate group-hover:text-amber-600 transition-colors">
+                          {mono.title}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mt-0.5">
+                          <span>{mono.voice}</span>
+                          <span>•</span>
+                          <span>{mono.text?.length || 0} chars</span>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={(e) => handleDeleteMonologue(mono.id, e)}
+                        disabled={deletingId === mono.id}
+                        className="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Delete monologue"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { onLoadMonologue(mono); onClose(); }}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-900 group-hover:bg-amber-500 text-white font-mono text-xs font-bold uppercase tracking-wider transition-colors shadow-2xs"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           )}
         </div>
 
-        {/* Footer info */}
-        <div className="p-4 bg-white border-t-2 border-[#1A1A1A] flex items-center justify-between text-xs font-mono text-zinc-500">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Project ID: <code className="bg-zinc-100 px-1 py-0.5 border border-zinc-300 font-bold text-zinc-800">gen-lang-client-0637573997</code></span>
+        {/* Footer */}
+        <div className="p-3.5 sm:px-6 bg-white border-t border-zinc-200 flex items-center justify-between text-xs font-mono text-zinc-500 flex-shrink-0">
+          <div className="flex items-center gap-1.5 truncate">
+            <Database className="w-3.5 h-3.5 text-zinc-400" />
+            <span className="truncate">Project: ai-studio-socialnot-845fd311</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-zinc-200 hover:bg-zinc-300 text-[#1A1A1A] font-bold uppercase border border-[#1A1A1A]"
+            className="px-4 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-100 text-zinc-800 font-bold uppercase transition-colors"
           >
             Close
           </button>

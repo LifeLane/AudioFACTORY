@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/genai": "*",
+    "@liveblocks/client": "^3.24.1",
+    "@liveblocks/react": "^3.24.1",
     "clsx": "^2.1.1",
     "firebase": "^12.18.0",
     "framer-motion": "^12.35.2",

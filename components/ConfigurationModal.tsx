@@ -1,9 +1,6 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
 import React, { useState, useMemo, useEffect } from 'react';
 import { Voice } from '../types';
+import { Settings, X, Search, Check, Sparkles, SlidersHorizontal, Volume2 } from 'lucide-react';
 
 interface ConfigurationModalProps {
   isOpen: boolean;
@@ -36,141 +33,114 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
     });
   }, [filterGender, filterProvider, searchQuery, voices]);
 
-
-  // Focus Management (Only runs when isOpen changes)
-  // This prevents focus from jumping to the first element when the parent component re-renders
-  // but the modal remains open (e.g., when the flag cycler updates in App.tsx).
+  // Focus Management
   useEffect(() => {
     if (!isOpen) return;
-
-    const previousActiveElement = document.activeElement as HTMLElement;
     const modalElement = document.getElementById('config-modal');
-
     if (modalElement) {
-        // Find focusable elements
-        const focusableElements = modalElement.querySelectorAll(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        
-        if (focusableElements.length > 0) {
-            (focusableElements[0] as HTMLElement).focus();
-        }
+      const searchInput = modalElement.querySelector('input');
+      if (searchInput) {
+        searchInput.focus();
+      }
     }
-
-    return () => {
-        previousActiveElement?.focus();
-    };
   }, [isOpen]);
 
-  // Keyboard Event Trap (Updates when dependencies like onClose change)
+  // Keyboard Event Trap
   useEffect(() => {
     if (!isOpen) return;
-
-    const modalElement = document.getElementById('config-modal');
-
     const handleKeyDown = (e: KeyboardEvent) => {
-        if (!modalElement) return;
-
-        const focusableElements = modalElement.querySelectorAll(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-
-        if (e.key === 'Tab') {
-            if (focusableElements.length === 0) return;
-
-            const firstElement = focusableElements[0] as HTMLElement;
-            const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstElement) {
-                    e.preventDefault();
-                    lastElement.focus();
-                }
-            } else {
-                if (document.activeElement === lastElement) {
-                    e.preventDefault();
-                    firstElement.focus();
-                }
-            }
-        }
-        if (e.key === 'Escape') {
-            onClose();
-        }
+      if (e.key === 'Escape') {
+        onClose();
+      }
     };
-
     window.addEventListener('keydown', handleKeyDown);
-    
-    return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-150"
       role="dialog"
       aria-modal="true"
       aria-labelledby="config-modal-title"
     >
       <div 
         id="config-modal"
-        className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 shadow-lg shadow-black/50"
+        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col bg-white border border-zinc-200 rounded-xl shadow-2xl overflow-hidden"
       >
         
         {/* Header */}
-        <div className="bg-amber-500 border-b border-zinc-800 p-6 flex justify-between items-center flex-shrink-0">
-          <h2 id="config-modal-title" className="text-2xl font-light tracking-widest flex items-center gap-3">
-            <span className="text-3xl" aria-hidden="true">⚙</span> Configuration
-          </h2>
+        <div className="p-4 sm:p-5 border-b border-zinc-200 bg-zinc-50 flex justify-between items-center flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-zinc-900 text-white flex items-center justify-center shadow-xs">
+              <Settings className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 id="config-modal-title" className="text-base sm:text-lg font-bold text-zinc-900 flex items-center gap-2">
+                Voice Configuration & Studio Cast
+              </h2>
+              <p className="text-xs text-zinc-500 font-mono">
+                Multilingual neural voices from Gemini and ElevenLabs
+              </p>
+            </div>
+          </div>
+          
           <button 
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-700 hover:bg-white hover:text-white transition-colors text-xl font-light focus:outline-none focus:ring-4 focus:ring-rose-600"
+            className="w-9 h-9 flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
             aria-label="Close configuration"
           >
-            X
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 md:p-8 flex flex-col min-h-0">
-          <div className="mb-4">
-            <label className="block text-xl font-light tracking-widest mb-1">Select Speaker Voice</label>
-            <p className="text-sm text-zinc-300 font-light tracking-widest">These voices are multilingual and adapt to your text.</p>
-          </div>
+        <div className="p-4 sm:p-6 flex flex-col min-h-0 bg-white space-y-4">
           
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Filters Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label htmlFor="search-voice" className="block text-xs font-light tracking-widest mb-2">Search</label>
-              <input
-                id="search-voice"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter by name..."
-                className="w-full p-3 border border-zinc-800 font-light bg-zinc-900 text-sm text-white focus:outline-none focus:ring-4 focus:ring-amber-500"
-              />
+              <label htmlFor="search-voice" className="block text-xs font-mono font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                Search Voice
+              </label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="search-voice"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter by name or style..."
+                  className="w-full pl-8 pr-3 py-2 border border-zinc-200 rounded-lg bg-zinc-50 text-sm text-zinc-900 placeholder:text-zinc-400 font-sans focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white transition-all"
+                />
+              </div>
             </div>
+
             <div>
-              <label htmlFor="provider-filter" className="block text-xs font-light tracking-widest mb-2">Provider</label>
+              <label htmlFor="provider-filter" className="block text-xs font-mono font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                Provider Engine
+              </label>
               <select 
                 id="provider-filter"
-                className="w-full p-3 border border-zinc-800 font-light bg-zinc-900 text-sm text-white focus:outline-none focus:ring-4 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-zinc-50 text-sm text-zinc-900 font-sans focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white transition-all cursor-pointer"
                 value={filterProvider}
                 onChange={(e) => setFilterProvider(e.target.value)}
               >
-                <option value="ALL">All Providers (Gemini & ElevenLabs)</option>
+                <option value="ALL">All Engines (Gemini & ElevenLabs)</option>
                 <option value="gemini">Gemini Neural Voices</option>
                 <option value="elevenlabs">ElevenLabs Voices</option>
               </select>
             </div>
+
             <div>
-              <label htmlFor="gender-filter" className="block text-xs font-light tracking-widest mb-2">Gender</label>
+              <label htmlFor="gender-filter" className="block text-xs font-mono font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                Vocal Gender
+              </label>
               <select 
                 id="gender-filter"
-                className="w-full p-3 border border-zinc-800 font-light bg-zinc-900 text-sm text-white focus:outline-none focus:ring-4 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-zinc-200 rounded-lg bg-zinc-50 text-sm text-zinc-900 font-sans focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white transition-all cursor-pointer"
                 value={filterGender}
                 onChange={(e) => setFilterGender(e.target.value)}
               >
@@ -181,47 +151,98 @@ export const ConfigurationModal: React.FC<ConfigurationModalProps> = ({
             </div>
           </div>
 
-          {/* Voice List */}
-          <div className="flex-1 overflow-y-auto min-h-[300px] border border-zinc-800 bg-zinc-900 p-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup" aria-label="Voice Selection">
-              {filteredVoices.map((voice) => (
-                <label 
-                  key={voice.id}
-                  className={`
-                    flex items-center justify-between p-3 border border-zinc-800 cursor-pointer transition-colors
-                    focus-within:ring-4 focus-within:ring-amber-500
-                    ${selectedVoice === voice.id ? 'bg-zinc-900 text-white' : 'bg-zinc-900 hover:bg-amber-500 hover:text-zinc-50'}
-                  `}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-5 h-5 flex-shrink-0 border border-current rounded-full flex items-center justify-center`}>
-                      {selectedVoice === voice.id && <div className="w-2.5 h-2.5 bg-current rounded-full" />}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-light text-sm truncate">{voice.name}</span>
+          {/* Voice List in a Bento Tile Grid */}
+          <div className="flex-1 overflow-y-auto max-h-[380px] border border-zinc-200 rounded-xl bg-zinc-50/50 p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" role="radiogroup" aria-label="Voice Selection">
+              {filteredVoices.map((voice) => {
+                const isSelected = selectedVoice === voice.id;
+                const isElevenLabs = voice.provider === 'elevenlabs';
+
+                return (
+                  <label 
+                    key={voice.id}
+                    className={`
+                      flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all
+                      ${isSelected 
+                        ? 'bg-white border-zinc-950 ring-2 ring-zinc-950 shadow-xs' 
+                        : 'bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/80 shadow-2xs'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-mono text-xs font-bold ${
+                        isSelected 
+                          ? 'bg-zinc-950 text-white' 
+                          : isElevenLabs 
+                          ? 'bg-amber-100 text-amber-900' 
+                          : 'bg-sky-100 text-sky-900'
+                      }`}>
+                        <Volume2 className="w-4 h-4" />
                       </div>
-                      <span className="text-[10px] tracking-widest opacity-70">{voice.gender}</span>
+                      
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs sm:text-sm text-zinc-900 truncate">
+                            {voice.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-mono text-zinc-500 uppercase">
+                            {voice.gender}
+                          </span>
+                          <span className="text-zinc-300">•</span>
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                            isElevenLabs 
+                              ? 'bg-amber-50 text-amber-800 border-amber-200' 
+                              : 'bg-sky-50 text-sky-800 border-sky-200'
+                          }`}>
+                            {isElevenLabs ? 'ElevenLabs' : 'Gemini 2.5'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <input 
-                    type="radio" 
-                    name="voice" 
-                    value={voice.id}
-                    checked={selectedVoice === voice.id}
-                    onChange={(e) => onVoiceChange(e.target.value)}
-                    className="sr-only" 
-                  />
-                </label>
-              ))}
+
+                    <div className="flex items-center ml-2">
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                        isSelected 
+                          ? 'border-zinc-950 bg-zinc-950 text-white' 
+                          : 'border-zinc-300 bg-white'
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                    </div>
+                    
+                    <input 
+                      type="radio" 
+                      name="voice" 
+                      value={voice.id}
+                      checked={isSelected}
+                      onChange={(e) => onVoiceChange(e.target.value)}
+                      className="sr-only" 
+                    />
+                  </label>
+                );
+              })}
+
               {filteredVoices.length === 0 && (
-                <div className="col-span-2 text-center p-8 text-zinc-400 font-light">
-                  No voices found for current filters.
+                <div className="col-span-full text-center py-10 text-zinc-500 font-mono text-xs">
+                  No voices match your search criteria. Try a different query.
                 </div>
               )}
             </div>
           </div>
+
+          {/* Footer Controls */}
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-xs font-mono text-zinc-500">
+            <span>{filteredVoices.length} voices available</span>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-xs"
+            >
+              Confirm Selection
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
