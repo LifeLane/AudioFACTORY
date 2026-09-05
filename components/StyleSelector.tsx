@@ -2,10 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { INTRO_STYLES } from '../constants';
 import { getIcon, getColorClass } from './BauhausComponents';
 import { IntroStyle } from '../types';
+import { Search, Sparkles } from 'lucide-react';
 
 interface StyleSelectorProps {
   selectedStyle: IntroStyle;
@@ -17,14 +18,12 @@ interface StyleButtonProps {
   style: IntroStyle;
   isSelected: boolean;
   onClick: () => void;
-  effectiveAvatarSrc?: string;
 }
 
 const StyleButton: React.FC<StyleButtonProps> = ({ 
   style, 
   isSelected, 
-  onClick,
-  effectiveAvatarSrc
+  onClick
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -32,107 +31,126 @@ const StyleButton: React.FC<StyleButtonProps> = ({
     <button
       onClick={onClick}
       className={`
-        group relative flex items-center gap-4 p-6 text-left border-b border-zinc-800 transition-all
-        ${isSelected ? 'bg-zinc-900 text-white' : 'hover:bg-zinc-800 text-zinc-50'}
+        w-full group relative flex items-center gap-3 px-3.5 py-3 text-left border-b border-zinc-200 transition-all
+        ${isSelected 
+          ? 'bg-zinc-100 text-zinc-950 font-bold border-zinc-300' 
+          : 'bg-white hover:bg-zinc-50 text-zinc-800'
+        }
       `}
     >
       <div className={`
-        w-12 h-12 flex-shrink-0 flex items-center justify-center border border-current overflow-hidden
-        ${isSelected ? 'bg-zinc-900 text-white' : getColorClass(style.color, false)}
+        w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center border border-zinc-200 overflow-hidden shadow-xs
+        ${getColorClass(style.color, true)}
       `}>
-        {effectiveAvatarSrc && !imgError ? (
+        {style.avatarSrc && !imgError ? (
           <img 
-            src={effectiveAvatarSrc} 
+            src={style.avatarSrc} 
             alt={style.name} 
             className="w-full h-full object-cover"
             onError={() => setImgError(true)}
           />
         ) : (
-          getIcon(style.icon, "w-6 h-6")
+          getIcon(style.icon, "w-4 h-4 text-white")
         )}
       </div>
-      <div className="min-w-0">
-        <div className="font-light tracking-widest text-lg leading-tight mb-1">{style.name}</div>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-mono font-bold tracking-tight text-zinc-900 truncate">
+          {style.name}
+        </div>
+        <div className="text-[10px] font-mono text-zinc-500 truncate">
+          Voice: {style.defaultVoice}
+        </div>
       </div>
       {isSelected && (
-        <div className="absolute right-4 w-4 h-4 bg-zinc-900 rounded-full animate-pulse flex-shrink-0"></div>
+        <div className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
       )}
     </button>
   );
 };
 
 export const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, onCustomize }) => {
-  const [loadedAvatars, setLoadedAvatars] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Load thumbnails via fetch to bypass potential img tag static serving issues
-  useEffect(() => {
-    const createdUrls: string[] = [];
-    const loadThumbnails = async () => {
-      const loaded: Record<string, string> = {};
-      await Promise.all(INTRO_STYLES.map(async (style) => {
-        if (style.avatarSrc) {
-          try {
-            const response = await fetch(style.avatarSrc);
-            if (response.ok) {
-              const blob = await response.blob();
-              const url = URL.createObjectURL(blob);
-              createdUrls.push(url);
-              loaded[style.id] = url;
-            }
-          } catch (e) {
-            console.error("Failed to load avatar:", style.avatarSrc, e);
-          }
-        }
-      }));
-      setLoadedAvatars(loaded);
-    };
-    loadThumbnails();
-
-    return () => {
-        // Cleanup object URLs to avoid memory leaks
-        createdUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, []);
+  const filteredStyles = useMemo(() => {
+    if (!searchQuery.trim()) return INTRO_STYLES;
+    const q = searchQuery.toLowerCase();
+    return INTRO_STYLES.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      s.defaultVoice.toLowerCase().includes(q) ||
+      s.description.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950">
-      
-      <div className="flex-1 overflow-y-auto bg-zinc-950 custom-scrollbar">
+    <div className="flex flex-col h-full bg-white">
+      {/* Search Bar */}
+      <div className="p-2.5 border-b border-zinc-200 bg-zinc-50">
+        <div className="relative flex items-center">
+          <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search personas..."
+            className="w-full pl-8 pr-2.5 py-1.5 text-xs font-mono bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-zinc-900 placeholder:text-zinc-400"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 text-xs font-mono text-zinc-400 hover:text-zinc-700"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Preset List */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="flex flex-col">
-          {INTRO_STYLES.map((style) => (
+          {filteredStyles.map((style) => (
             <StyleButton 
               key={style.id}
               style={style}
               isSelected={selectedStyle.id === style.id}
               onClick={() => onSelect(style)}
-              effectiveAvatarSrc={loadedAvatars[style.id] || style.avatarSrc}
             />
           ))}
 
+          {filteredStyles.length === 0 && (
+            <div className="p-4 text-center text-xs font-mono text-zinc-400">
+              No matching personas found.
+            </div>
+          )}
+
+          {/* Custom Persona Builder Button */}
           <button
             onClick={onCustomize}
             className={`
-              group relative flex items-center gap-4 p-6 text-left border-b border-zinc-800 transition-all
-              ${selectedStyle.id === 'custom' ? 'bg-amber-500 text-white' : 'hover:bg-zinc-800 text-zinc-50'}
+              w-full group relative flex items-center gap-3 px-3.5 py-3 text-left border-b border-zinc-200 transition-all
+              ${selectedStyle.id === 'custom' 
+                ? 'bg-amber-50 text-zinc-950 font-bold border-amber-300' 
+                : 'bg-white hover:bg-zinc-50 text-zinc-800'
+              }
             `}
           >
-             <div className={`
-                  w-12 h-12 flex-shrink-0 flex items-center justify-center border border-current
-                  ${selectedStyle.id === 'custom' ? 'bg-white text-white' : 'bg-zinc-900 text-zinc-50'}
-                `}>
-                  {getIcon('plus', "w-6 h-6")}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-light tracking-widest text-lg leading-tight mb-1">Make Your Own</div>
-                </div>
-                {selectedStyle.id === 'custom' && (
-                  <div className="absolute right-4 w-4 h-4 bg-white rounded-full animate-pulse flex-shrink-0"></div>
-                )}
+            <div className="w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center border border-zinc-300 bg-zinc-100 text-zinc-700 shadow-xs">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-mono font-bold tracking-tight text-zinc-900">
+                Make Your Own
+              </div>
+              <div className="text-[10px] font-mono text-zinc-500 truncate">
+                Custom voice prompt
+              </div>
+            </div>
+            {selectedStyle.id === 'custom' && (
+              <div className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+            )}
           </button>
-
         </div>
       </div>
-      
     </div>
   );
 };

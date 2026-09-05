@@ -18,38 +18,65 @@
 
 /* Global Styles */
 body {
-  background-color: #F4F4F0;
-  color: #1A1A1A;
+  background-color: #F7F7F4;
+  color: #18181B;
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Precision Studio Shadows */
+.shadow-studio {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07);
+}
+
+.shadow-studio-md {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+}
+
+.shadow-studio-lg {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+}
+
+.shadow-tactile {
+  box-shadow: 0 2px 0 0 #D4D4D8;
 }
 
 .shadow-hard {
-  box-shadow: 8px 8px 0px 0px #1A1A1A;
+  box-shadow: 4px 4px 0px 0px #18181B;
 }
 
 .shadow-hard-sm {
-  box-shadow: 4px 4px 0px 0px #1A1A1A;
+  box-shadow: 2px 2px 0px 0px #18181B;
 }
 
 .shadow-hard-xs {
-  box-shadow: 2px 2px 0px 0px #1A1A1A;
+  box-shadow: 1px 1px 0px 0px #18181B;
 }
 
+/* Audio Level Pulse */
+@keyframes audio-pulse {
+  0%, 100% { height: 4px; }
+  50% { height: 18px; }
+}
 
-/* Custom Scrollbar for Bauhaus feel */
+.animate-audio-bar {
+  animation: audio-pulse 0.8s ease-in-out infinite alternate;
+}
+
+/* Custom Precision Scrollbar */
 ::-webkit-scrollbar {
-  width: 12px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-zinc-50);
-  border-left: 2px solid var(--color-zinc-900);
+  background: #F4F4F0;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-zinc-900);
-  border: 2px solid var(--color-zinc-50);
+  background: #D4D4D8;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-rose-600);
+  background: #A1A1AA;
 }
 
 /* Utility classes for hiding/showing scrollbars */

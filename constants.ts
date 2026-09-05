@@ -24,7 +24,6 @@ Marcus is the best in the world for high-stakes action, apocalyptic sci-fi, or w
     defaultVoice: 'Algieba',
     color: 'black',
     icon: 'circle',
-    avatarSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/blockbuster.jpeg',
     templateText: `in a world where quarterly goals were thought to be impossible
 one team dared to defy the odds
 they faced bugs
@@ -34,14 +33,12 @@ THE DEADLINE.
 
 AND. THEY. PREVAILED.
 
-coming to a screen near you... this is our q3 review.`,
-    audioSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/trailer_v3.wav'
+coming to a screen near you... this is our q3 review.`
   },
   {
     id: 'radio',
     name: 'Radio DJ',
     description: `The Radio DJ
-The Radio DJ
 # AUDIO PROFILE: Jaz
 ## "The Morning Hype"
 
@@ -59,9 +56,7 @@ Jaz is the industry standard for Top 40 radio, high-octane event promos, or any 
     defaultVoice: 'Vindemiatrix',
     color: 'yellow',
     icon: 'square',
-    avatarSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/radio.jpeg',
-    templateText: "Yes, massive vibes in the studio! You are locked in and it is absolutely popping off in London right now. If you're stuck on the tube, or just sat there pretending to work... stop it. Seriously, I see you. Turn this up! We’ve got the project roadmap landing in three, two... let's go!",
-    audioSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/radio_v3.wav'
+    templateText: "Yes, massive vibes in the studio! You are locked in and it is absolutely popping off in London right now. If you're stuck on the tube, or just sat there pretending to work... stop it. Seriously, I see you. Turn this up! We’ve got the project roadmap landing in three, two... let's go!"
   },
   {
     id: 'influencer',
@@ -96,9 +91,7 @@ Monica is a leading beautiy influencer on social media, known for her sassy beau
     defaultVoice: 'Leda',
     color: 'blue',
     icon: 'circle',
-    avatarSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/influencer.jpeg',
-    templateText: "Okay, wait, ignore the hair. I literally just woke up. So, everyone has been asking about the lip combo, and I honestly wasn't gonna share it. Because I am a gatekeeper. Just kidding. But seriously, look at this gloss. It is giving... glazed donut. Wait, do I look orange in this lighting? Whatever. You guys get the vibe.",
-    audioSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/si-influencer_v3.wav'
+    templateText: "Okay, wait, ignore the hair. I literally just woke up. So, everyone has been asking about the lip combo, and I honestly wasn't gonna share it. Because I am a gatekeeper. Just kidding. But seriously, look at this gloss. It is giving... glazed donut. Wait, do I look orange in this lighting? Whatever. You guys get the vibe."
  },
  {
     id: 'podcaster',
@@ -124,9 +117,7 @@ Paul writes a popular column for a major intellectual magazine and is well know 
     defaultVoice: 'Zubenelgenubi',
     color: 'green',
     icon: 'circle',
-    avatarSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/podcaster.png',
-    templateText: "Hey everyone, welcome back. I was actually debating what to talk about today, but then I had this conversation this morning that I just... I have to share it with you. We get so obsessed with the end goal that we forget the process is literally ninety percent of our lives. We got a great one lined up for today, so let's get into it.",
-    audioSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/podcaster_v3.wav'
+    templateText: "Hey everyone, welcome back. I was actually debating what to talk about today, but then I had this conversation this morning that I just... I have to share it with you. We get so obsessed with the end goal that we forget the process is literally ninety percent of our lives. We got a great one lined up for today, so let's get into it."
  },
  {
     id: 'asmr',
@@ -151,9 +142,7 @@ Vocal Fry (The "Morning Voice"): A rumbly, relaxed texture in the lower register
     defaultVoice: 'Vindemiatrix',
     color: 'blue',
     icon: 'circle',
-    avatarSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/asmr_v2.jpeg',
-    templateText: "Hey... I literally just got out of the ocean, so if I sound a bit salty... that’s why. Can you hear the waves behind me? The energy out here today is just... naur, it’s actually insane. It’s so light. Wait, stay still. You have a little bit of technical debt right there. There.. All gone.",
-    audioSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/asmr_v3.wav'
+    templateText: "Hey... I literally just got out of the ocean, so if I sound a bit salty... that’s why. Can you hear the waves behind me? The energy out here today is just... naur, it’s actually insane. It’s so light. Wait, stay still. You have a little bit of technical debt right there. There.. All gone."
  },
  {
     id: 'corporate_santa',
@@ -177,9 +166,7 @@ Nicholas is an energetic, and a bit out of breath after delivering all the toys 
     defaultVoice: 'Sadachbia',
     color: 'red',
     icon: 'square',
-    avatarSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/santa.png',
-    templateText: `Ho, ho, ho! and happy holidays to all! Steady on the reins, old friends! We have a special surprise to deploy! Before the dolls and trains, let's give the world a smarter kind of joy. On Dasher! on dancer! lets get these early gifts for everyone: the power of Gemini!`,
-    audioSrc: 'https://www.gstatic.com/aistudio/starter-apps/synergy-intro/santa_v3.wav'
+    templateText: `Ho, ho, ho! and happy holidays to all! Steady on the reins, old friends! We have a special surprise to deploy! Before the dolls and trains, let's give the world a smarter kind of joy. On Dasher! on dancer! lets get these early gifts for everyone: the power of Gemini!`
  }
 ];
 

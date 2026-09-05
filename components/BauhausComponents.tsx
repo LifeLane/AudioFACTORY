@@ -85,16 +85,16 @@ export const BauhausButton: React.FC<BauhausButtonProps> = ({
   className = '',
   ...props 
 }) => {
-  const baseClasses = "relative font-light text-lg border border-zinc-800 p-4 transition-transform active:translate-x-1 active:translate-y-1 hover:-translate-y-1 hover:shadow-lg shadow-black/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none";
+  const baseClasses = "relative font-mono text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-md border transition-all active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-studio select-none";
   
-  let colorClasses = "bg-zinc-950 text-zinc-50";
-  if (variant === 'primary') colorClasses = "bg-sky-500 text-white";
-  if (variant === 'danger') colorClasses = "bg-rose-500 text-white";
-  if (variant === 'secondary') colorClasses = "bg-amber-500 text-zinc-50";
+  let colorClasses = "bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-950";
+  if (variant === 'primary') colorClasses = "bg-sky-600 hover:bg-sky-500 text-white border-sky-700 shadow-sm";
+  if (variant === 'danger') colorClasses = "bg-rose-600 hover:bg-rose-500 text-white border-rose-700 shadow-sm";
+  if (variant === 'secondary') colorClasses = "bg-amber-400 hover:bg-amber-300 text-zinc-950 border-amber-500 shadow-sm";
 
   return (
     <button className={`${baseClasses} ${colorClasses} ${className}`} {...props}>
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-2">
         {icon}
         {children}
       </div>
