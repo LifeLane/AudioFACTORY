@@ -146,7 +146,20 @@ export const generateSpeech = async (
     });
 
     const audioBytes = decodeBase64ToBytes(data.audioBase64);
-    const audioBuffer = await outputAudioContext.decodeAudioData(audioBytes.buffer.slice(0) as ArrayBuffer);
+    let audioBuffer: AudioBuffer;
+
+    if (data.contentType && data.contentType.includes('audio/pcm')) {
+      const numSamples = audioBytes.length / 2;
+      const sampleRate = data.sampleRate || 24000;
+      audioBuffer = outputAudioContext.createBuffer(1, numSamples, sampleRate);
+      const channelData = audioBuffer.getChannelData(0);
+      const dataView = new DataView(audioBytes.buffer, audioBytes.byteOffset, audioBytes.byteLength);
+      for (let i = 0; i < numSamples; i++) {
+         channelData[i] = dataView.getInt16(i * 2, true) / 32768;
+      }
+    } else {
+      audioBuffer = await outputAudioContext.decodeAudioData(audioBytes.buffer.slice(0) as ArrayBuffer);
+    }
 
     return {
       buffer: audioBuffer,

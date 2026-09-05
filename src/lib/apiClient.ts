@@ -53,6 +53,11 @@ export async function apiGet<T = any>(endpoint: string): Promise<T> {
     throw new Error(errorBody.message || errorBody.error || `Request failed with status ${response.status}`);
   }
 
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('text/html')) {
+    throw new Error('API server not reachable. Received HTML instead of JSON. Ensure the backend server is running and VITE_API_BASE_URL is configured if deploying to Vercel/Netlify.');
+  }
+
   return response.json();
 }
 
@@ -76,6 +81,11 @@ export async function apiPost<T = any>(endpoint: string, body: any): Promise<T> 
     err.code = errorBody.error;
     err.quotaDetails = errorBody.details;
     throw err;
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('text/html')) {
+    throw new Error('API server not reachable. Received HTML instead of JSON. Ensure the backend server is running and VITE_API_BASE_URL is configured if deploying to Vercel/Netlify.');
   }
 
   return response.json();
