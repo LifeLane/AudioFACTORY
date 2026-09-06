@@ -365,9 +365,19 @@ jobs:
           name: audiofactory-release-aab
           path: android/app/build/outputs/bundle/release/
 
+      - name: 🔍 Verify Google Play Credentials
+        id: play_check
+        run: |
+          if [ -z "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}" ]; then
+            echo "ℹ️ GOOGLE_PLAY_SERVICE_ACCOUNT secret is missing. Skipping Google Play console upload."
+            echo "SKIP_PLAY_UPLOAD=true" >> $GITHUB_ENV
+          else
+            echo "SKIP_PLAY_UPLOAD=false" >> $GITHUB_ENV
+          fi
+
       - name: 🚀 Upload to Google Play Internal Testing Track
         id: upload_play_store
-        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT != '' }}
+        if: env.SKIP_PLAY_UPLOAD != 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonRaw: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
