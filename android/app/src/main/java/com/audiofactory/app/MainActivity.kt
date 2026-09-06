@@ -266,57 +266,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 2. Initialize Lightweight Native Splash/Loading Screen
-        splashLayout = LinearLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0D1117"))
-        }
-
-        val logoText = TextView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = dpToPx(16)
-            }
-            text = "AudioFACTORY"
-            setTextColor(Color.parseColor("#F59E0B")) // Premium Amber Accent
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 36f)
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            letterSpacing = 0.05f
-        }
-
-        val loaderProgress = ProgressBar(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                dpToPx(48),
-                dpToPx(48)
-            ).apply {
-                bottomMargin = dpToPx(16)
-            }
-            // Stylize progress loader using the amber brand color
-            indeterminateDrawable?.setColorFilter(Color.parseColor("#F59E0B"), android.graphics.PorterDuff.Mode.SRC_IN)
-        }
-
-        val loadingLabel = TextView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            text = "CONNECTING TO STUDIO..."
-            setTextColor(Color.parseColor("#8B949E"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            typeface = Typeface.MONOSPACE
-            letterSpacing = 0.1f
-        }
-
-        splashLayout.addView(logoText)
-        splashLayout.addView(loaderProgress)
-        splashLayout.addView(loadingLabel)
+        // 2. Initialize Lightweight Native Splash/Loading Screen from layout resource
+        splashLayout = layoutInflater.inflate(R.layout.activity_splash, rootLayout, false) as LinearLayout
 
         // 3. Initialize Error/Offline Screen
         errorLayout = LinearLayout(this).apply {

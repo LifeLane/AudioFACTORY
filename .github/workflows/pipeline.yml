@@ -1,0 +1,389 @@
+name: AudioFACTORY Unified Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Target Deployment Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      skip_tests:
+        description: 'Skip quality & verification tests'
+        required: false
+        default: false
+        type: boolean
+      build_target:
+        description: 'Android Build Target'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - 'both'
+          - 'aab'
+          - 'apk'
+      play_track:
+        description: 'Google Play Testing Track'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+      play_status:
+        description: 'Google Play Release Status'
+        required: true
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
+          - inProgress
+          - halted
+
+concurrency:
+  group: unified-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-test:
+    name: 🔍 Quality & Build Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci || npm install
+
+      - name: 🔍 TypeScript Typecheck & Linting
+        if: ${{ github.event.inputs.skip_tests != 'true' }}
+        run: npm run lint
+
+      - name: 🧪 Execute Unit & Integration Tests
+        if: ${{ github.event.inputs.skip_tests != 'true' }}
+        run: npm test
+
+      - name: 🏗️ Full-Stack Production Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: 🛡️ Verify Production Build Integrity
+        run: |
+          test -f dist/index.html || { echo "❌ Error: dist/index.html is missing"; exit 1; }
+          test -f dist/server.cjs || { echo "❌ Error: dist/server.cjs is missing"; exit 1; }
+          echo "✅ Full-stack web and backend bundles verified."
+
+      - name: 🔒 Security - Secret Leak Prevention
+        run: |
+          echo "Scanning for sensitive credentials..."
+          LEAK_FOUND=0
+          if git ls-files | grep -E '(\.jks|\.keystore|service-account.*\.json|.*firebase-adminsdk.*\.json|\.env$)'; then
+            echo "❌ CRITICAL SECURITY ALERT: Sensitive secret files found in git index!"
+            LEAK_FOUND=1
+          fi
+          if [ $LEAK_FOUND -ne 0 ]; then
+            exit 1
+          fi
+          echo "✅ No credentials leaked in git indices."
+
+      - name: 🛡️ Security - NPM Dependency Audit
+        run: npm audit --audit-level=critical || echo "⚠️ Non-blocking warnings in third-party audits."
+
+  deploy-cloud-run:
+    name: 🚀 Deploy to Google Cloud Run
+    needs: verify-and-test
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci || npm install
+
+      - name: 🏗️ Compile Web Production Bundle
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_APP_ENV: ${{ github.event.inputs.deploy_environment || 'production' }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        id: auth
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "ℹ️ Missing GCP_SA_KEY secret. Skipping live deployment. (Only compilation tested)."
+            echo "SKIPPED_DEPLOY=true" >> $GITHUB_ENV
+          else
+            echo "GCP SA Credential detected. Authenticating..."
+            echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-sa.json
+            gcloud auth activate-service-account --key-file=/tmp/gcp-sa.json
+            gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+            echo "SKIPPED_DEPLOY=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🐳 Build & Push Docker Container to Artifact Registry
+        if: env.SKIPPED_DEPLOY != 'true'
+        run: |
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/audiofactory-backend:latest
+
+      - name: 🚀 Deploy Full-Stack Service to Cloud Run
+        if: env.SKIPPED_DEPLOY != 'true'
+        run: |
+          gcloud run deploy audiofactory-backend \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/audiofactory-backend:latest \
+            --platform managed \
+            --region asia-southeast1 \
+            --allow-unauthenticated \
+            --set-env-vars "NODE_ENV=production,FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}"
+
+      - name: 🧹 Secure Cleanup
+        if: always()
+        run: rm -f /tmp/gcp-sa.json
+
+  deploy-firebase:
+    name: 🔥 Deploy Firebase Infrastructure
+    needs: verify-and-test
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Firebase CLI Tools
+        run: npm install -g firebase-tools
+
+      - name: 🔍 Validate Firestore Rules Syntax
+        run: |
+          test -f firestore.rules || { echo "❌ Missing firestore.rules"; exit 1; }
+          test -f firestore.indexes.json || { echo "❌ Missing firestore.indexes.json"; exit 1; }
+          grep -q "service cloud.firestore" firestore.rules || { echo "❌ Invalid firestore.rules"; exit 1; }
+          echo "✅ Rules validated."
+
+      - name: 🔐 Authenticate with Firebase
+        id: firebase_auth
+        run: |
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
+            echo "ℹ️ Missing FIREBASE_SERVICE_ACCOUNT secret. Skipping rule deployment."
+            echo "SKIPPED_FIREBASE=true" >> $GITHUB_ENV
+          else
+            echo "Firebase service account credentials verified."
+            echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/firebase-sa.json
+            echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json" >> $GITHUB_ENV
+            echo "SKIPPED_FIREBASE=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🚀 Deploy Firestore Rules & Indexes
+        if: env.SKIPPED_FIREBASE != 'true'
+        run: |
+          firebase deploy --only firestore --non-interactive
+
+      - name: 🧹 Cleanup Firebase Secrets
+        if: always()
+        run: rm -f /tmp/firebase-sa.json
+
+  build-android:
+    name: 🤖 Android Package Compilation
+    needs: verify-and-test
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: ☕ Setup Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📦 Install Dependencies
+        run: npm ci || npm install
+
+      - name: 🏗️ Compile Web Bundle
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_APP_ENV: ${{ github.event.inputs.deploy_environment || 'production' }}
+
+      - name: 🔄 Sync Capacitor Android Platform
+        run: npx cap sync android
+
+      - name: 🔐 Configure Release Keystore
+        id: android_keystore
+        run: |
+          mkdir -p android/keystores
+          if [ -n "${{ secrets.ANDROID_KEYSTORE }}" ]; then
+            echo "Decoding release keystore..."
+            echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > android/keystores/release.jks
+            echo "KEYSTORE_CONFIGURED=true" >> $GITHUB_ENV
+            echo "KEYSTORE_PATH=$(pwd)/android/keystores/release.jks" >> $GITHUB_ENV
+            echo "AUDIOFACTORY_KEYSTORE_PATH=$(pwd)/android/keystores/release.jks" >> $GITHUB_ENV
+          else
+            echo "ℹ️ Fallback signing (Debug) used. Release keystore absent."
+            echo "KEYSTORE_CONFIGURED=false" >> $GITHUB_ENV
+          fi
+
+      - name: 🔨 Make Gradlew Executable
+        working-directory: ./android
+        run: chmod +x ./gradlew
+
+      - name: 🚀 Build Android Debug APK
+        if: ${{ github.event.inputs.build_target != 'aab' }}
+        working-directory: ./android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: 📦 Build Android Release App Bundle (AAB)
+        if: ${{ github.event.inputs.build_target != 'apk' && env.KEYSTORE_CONFIGURED == 'true' }}
+        working-directory: ./android
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          AUDIOFACTORY_KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          AUDIOFACTORY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          AUDIOFACTORY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          AUDIOFACTORY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --stacktrace
+
+      - name: 📱 Build Android Release APK
+        if: ${{ github.event.inputs.build_target != 'aab' && env.KEYSTORE_CONFIGURED == 'true' }}
+        working-directory: ./android
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          AUDIOFACTORY_KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          AUDIOFACTORY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          AUDIOFACTORY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          AUDIOFACTORY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: 🧹 Secure Keystore Cleanup
+        if: always()
+        run: rm -f android/keystores/release.jks
+
+      - name: 📤 Upload Release AAB Bundle Artifact
+        if: ${{ github.event.inputs.build_target != 'apk' && env.KEYSTORE_CONFIGURED == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 📤 Upload Release APK Artifact
+        if: ${{ github.event.inputs.build_target != 'aab' && env.KEYSTORE_CONFIGURED == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: 📤 Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiofactory-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 7
+
+  release-google-play:
+    name: 🏷️ Play Console & GitHub Tag Release
+    needs: build-android
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: 📥 Download Signed AAB Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: audiofactory-release-aab
+          path: android/app/build/outputs/bundle/release/
+
+      - name: 🚀 Upload to Google Play Internal Testing Track
+        id: upload_play_store
+        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonRaw: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: com.audiofactory.app
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ github.event.inputs.play_track || 'internal' }}
+          status: ${{ github.event.inputs.play_status || 'completed' }}
+          changesNotSentForReview: false
+
+      - name: 🏷️ Create GitHub Release with Attached AAB
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/bundle/release/app-release.aab
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
