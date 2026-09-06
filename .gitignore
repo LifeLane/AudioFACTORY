@@ -9,6 +9,9 @@ dist
 # Android & Keystores
 *.jks
 *.keystore
+*.p12
+*.pfx
+*.pem
 android/keystores/*.jks
 android/keystores/*.keystore
 android/app/google-services.json
@@ -17,7 +20,10 @@ android/app/build
 android/build
 
 # Service Account & Cloud Credentials
+*-service-account.json
 *service-account*.json
+google-credentials*.json
+firebase-admin*.json
 *firebase-adminsdk*.json
 credentials.json
 key.json
