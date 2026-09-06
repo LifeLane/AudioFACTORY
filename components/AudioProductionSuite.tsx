@@ -24,6 +24,8 @@ import { generateBGM } from '../services/elevenLabsService';
 import { decodeBase64ToBytes } from '../services/geminiService';
 import { LivePresenceBar } from './LivePresenceBar';
 import { useFirebase } from '../services/firebaseContext';
+import { useTerminal } from './terminal/TerminalContext';
+import { TerminalAudioSuiteView } from './terminal/TerminalAudioSuiteView';
 
 interface AudioProductionSuiteProps {
   onBgmBufferGenerated?: (buffer: AudioBuffer) => void;
@@ -46,6 +48,7 @@ export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
   onRequireAuth
 }) => {
   const { user } = useFirebase();
+  const { isTerminalMode } = useTerminal();
   const [sfxGeneratingId, setSfxGeneratingId] = useState<string | null>(null);
   const [generatedSfx, setGeneratedSfx] = useState<Record<string, string>>({});
   const [playingSfxId, setPlayingSfxId] = useState<string | null>(null);
@@ -84,6 +87,26 @@ export const AudioProductionSuite: React.FC<AudioProductionSuiteProps> = ({
     audio.onended = () => setPlayingSfxId(null);
     audio.play();
   };
+
+  if (isTerminalMode) {
+    return (
+      <TerminalAudioSuiteView
+        onBgmBufferGenerated={onBgmBufferGenerated}
+        onOpenVoiceCloning={onOpenVoiceCloning}
+        activeBgmBuffer={activeBgmBuffer}
+        onRequireAuth={onRequireAuth}
+        bgmVolume={bgmVolume}
+        setBgmVolume={setBgmVolume}
+        voiceVolume={voiceVolume}
+        setVoiceVolume={setVoiceVolume}
+        sfxGeneratingId={sfxGeneratingId}
+        generatedSfx={generatedSfx}
+        playingSfxId={playingSfxId}
+        handleGenerateQuickSfx={handleGenerateQuickSfx}
+        playSfx={playSfx}
+      />
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar p-3 sm:p-5 md:p-6 space-y-4 bg-[#F7F7F4] dark:bg-[#0D1117] dark:text-[#E6EDF3]">

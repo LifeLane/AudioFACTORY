@@ -43,6 +43,9 @@ import { useFirebase } from '../services/firebaseContext';
 import { useLiveblocks } from '../services/liveblocksContext';
 import { LivePresenceBar } from './LivePresenceBar';
 import { QuotaExhaustedBanner } from './QuotaExhaustedBanner';
+import { useTerminal } from './terminal/TerminalContext';
+import { TerminalWindow } from './terminal/TerminalWindow';
+import { TerminalMultiSpeakerView } from './terminal/TerminalMultiSpeakerView';
 
 interface MultiSpeakerStudioProps {
   onBgmOverlay?: (buffer: AudioBuffer) => void;
@@ -107,6 +110,7 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   onRequireAuth
 }) => {
   const { savedProjects, saveProjectToCloud, isSaving, user } = useFirebase();
+  const { isTerminalMode, terminalTheme } = useTerminal();
   const { collaborators, broadcastAudioPlay, setActiveEditingLine } = useLiveblocks();
   const [justSaved, setJustSaved] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
@@ -582,6 +586,60 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
 
   const readyCount = lines.filter(l => l.status === 'ready').length;
   const currentSpeakingLine = lines.find(l => l.id === playingLineId);
+
+  if (isTerminalMode) {
+    return (
+      <TerminalMultiSpeakerView
+        projectTitle={projectTitle}
+        format={format}
+        setFormat={setFormat}
+        styleTone={styleTone}
+        setStyleTone={setStyleTone}
+        speakerCount={speakerCount}
+        setSpeakerCount={setSpeakerCount}
+        topic={topic}
+        setTopic={setTopic}
+        speakers={speakers}
+        setSpeakers={setSpeakers}
+        lines={lines}
+        setLines={setLines}
+        readyCount={readyCount}
+        isPlayingFullSequence={isPlayingFullSequence}
+        isBatchGenerating={isBatchGenerating}
+        isSaving={isSaving}
+        justSaved={justSaved}
+        activeTool={activeTool}
+        setActiveTool={setActiveTool}
+        rawTextToAnalyze={rawTextToAnalyze}
+        setRawTextToAnalyze={setRawTextToAnalyze}
+        isAnalyzing={isAnalyzing}
+        isScriptGenerating={isScriptGenerating}
+        collapsedLineIds={collapsedLineIds}
+        toggleLineCollapse={toggleLineCollapse}
+        toggleCollapseAll={toggleCollapseAll}
+        handleMoveLine={handleMoveLine}
+        handleRemoveLine={handleRemoveLine}
+        handleAddLine={handleAddLine}
+        handleAddSpeaker={handleAddSpeaker}
+        handleSpeakerVoiceChange={handleSpeakerVoiceChange}
+        handlePlayFullScene={handlePlayFullScene}
+        stopCurrentPlayback={stopCurrentPlayback}
+        handleGenerateAllLines={handleGenerateAllLines}
+        handleDownloadCombinedWav={handleDownloadCombinedWav}
+        handleSaveToCloud={handleSaveToCloud}
+        onOpenCloudModal={onOpenCloudModal}
+        savedProjects={savedProjects}
+        elevenLabsVoices={elevenLabsVoices}
+        hasElevenLabsKey={hasElevenLabsKey}
+        batchProgress={batchProgress}
+        playLineAudio={playLineAudio}
+        playingLineId={playingLineId}
+        handleGenerateLine={handleGenerateLine}
+        handleAnalyzeContent={handleAnalyzeContent}
+        handleGenerateScriptWithAI={handleGenerateScriptWithAI}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#F7F7F4] dark:bg-[#0D1117] text-zinc-900 dark:text-[#E6EDF3] overflow-hidden select-none">
