@@ -20,7 +20,7 @@ const GOOGLE_COLORS = [
 
 export const TerminalBackgroundCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const { isAudioActive, scanlinesEnabled } = useTerminal();
+  const { isAudioActive, scanlinesEnabled, terminalTheme } = useTerminal();
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -1000, y: -1000, active: false });
 
   useEffect(() => {
@@ -52,17 +52,18 @@ export const TerminalBackgroundCanvas: React.FC = () => {
     window.addEventListener('mouseleave', handleMouseLeave);
 
     // Initialize Google particles
-    const particleCount = Math.min(32, Math.floor((width * height) / 30000));
+    const particleCount = Math.min(terminalTheme === 'googly' ? 48 : 32, Math.floor((width * height) / 25000));
     const particles: Particle[] = [];
     for (let i = 0; i < particleCount; i++) {
+      const isGoogly = terminalTheme === 'googly';
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        radius: Math.random() * 2 + 1.2,
+        vx: (Math.random() - 0.5) * (isGoogly ? 0.7 : 0.4),
+        vy: (Math.random() - 0.5) * (isGoogly ? 0.7 : 0.4),
+        radius: Math.random() * (isGoogly ? 2.5 : 2) + 1.2,
         color: GOOGLE_COLORS[i % GOOGLE_COLORS.length],
-        alpha: Math.random() * 0.4 + 0.3
+        alpha: Math.random() * 0.4 + (isGoogly ? 0.45 : 0.3)
       });
     }
 
@@ -83,9 +84,40 @@ export const TerminalBackgroundCanvas: React.FC = () => {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
 
+      // Googly theme corner color wash ambient light
+      if (terminalTheme === 'googly') {
+        // Top Left - Blue Glow
+        const gBlue = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(width, height) * 0.65);
+        gBlue.addColorStop(0, 'rgba(66, 133, 244, 0.15)');
+        gBlue.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = gBlue;
+        ctx.fillRect(0, 0, width, height);
+
+        // Top Right - Red Glow
+        const gRed = ctx.createRadialGradient(width, 0, 0, width, 0, Math.max(width, height) * 0.65);
+        gRed.addColorStop(0, 'rgba(234, 67, 53, 0.11)');
+        gRed.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = gRed;
+        ctx.fillRect(0, 0, width, height);
+
+        // Bottom Left - Yellow Glow
+        const gYellow = ctx.createRadialGradient(0, height, 0, 0, height, Math.max(width, height) * 0.65);
+        gYellow.addColorStop(0, 'rgba(251, 188, 4, 0.11)');
+        gYellow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = gYellow;
+        ctx.fillRect(0, 0, width, height);
+
+        // Bottom Right - Green Glow
+        const gGreen = ctx.createRadialGradient(width, height, 0, width, height, Math.max(width, height) * 0.65);
+        gGreen.addColorStop(0, 'rgba(52, 168, 83, 0.14)');
+        gGreen.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = gGreen;
+        ctx.fillRect(0, 0, width, height);
+      }
+
       // 2. High-Tech Matrix Grid with Subtle Google Color Accents
       const gridSize = 36;
-      ctx.strokeStyle = 'rgba(48, 54, 61, 0.25)';
+      ctx.strokeStyle = terminalTheme === 'googly' ? 'rgba(66, 133, 244, 0.15)' : 'rgba(48, 54, 61, 0.25)';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       for (let x = 0; x < width; x += gridSize) {
@@ -103,7 +135,7 @@ export const TerminalBackgroundCanvas: React.FC = () => {
       for (let x = step; x < width; x += step) {
         for (let y = step; y < height; y += step) {
           const colorIdx = ((x + y) / step) % 4;
-          ctx.fillStyle = GOOGLE_COLORS[colorIdx] + '25'; // 15% opacity
+          ctx.fillStyle = GOOGLE_COLORS[colorIdx] + (terminalTheme === 'googly' ? '45' : '25'); // higher opacity in googly
           ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
         }
       }
@@ -218,7 +250,7 @@ export const TerminalBackgroundCanvas: React.FC = () => {
       window.removeEventListener('mouseleave', handleMouseLeave);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isAudioActive]);
+  }, [isAudioActive, scanlinesEnabled, terminalTheme]);
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">

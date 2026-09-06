@@ -584,14 +584,14 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
   const currentSpeakingLine = lines.find(l => l.id === playingLineId);
 
   return (
-    <div className="flex flex-col h-full bg-[#F7F7F4] text-zinc-900 overflow-hidden select-none">
+    <div className="flex flex-col h-full bg-[#F7F7F4] dark:bg-[#0D1117] text-zinc-900 dark:text-[#E6EDF3] overflow-hidden select-none">
       
       {/* 1. TOP STUDIO SUB-HEADER (Clean & Precision-Engineered) */}
-      <div className="border-b border-zinc-200 bg-white px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 flex-shrink-0 z-20">
+      <div className="border-b border-zinc-200 dark:border-[#30363D] bg-white dark:bg-[#161B22]/95 px-4 md:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 flex-shrink-0 z-20 backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => setIsInspectorOpen(!isInspectorOpen)}
-            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md border border-zinc-200 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors"
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md border border-zinc-200 dark:border-[#30363D] text-zinc-600 dark:text-[#8B949E] hover:text-zinc-950 hover:bg-zinc-100 dark:hover:bg-[#21262D] transition-colors"
             title={isInspectorOpen ? "Collapse Cast Inspector" : "Expand Cast Inspector"}
           >
             {isInspectorOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -599,17 +599,17 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold tracking-wider bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30">
                 Multi-Speaker
               </span>
-              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase text-zinc-600 bg-zinc-100 border border-zinc-200">
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono uppercase text-zinc-600 dark:text-[#8B949E] bg-zinc-100 dark:bg-[#21262D] border border-zinc-200 dark:border-[#30363D]">
                 {format}
               </span>
-              <span className="hidden lg:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono text-zinc-500">
+              <span className="hidden lg:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono text-zinc-500 dark:text-[#8B949E]">
                 • {styleTone}
               </span>
             </div>
-            <h1 className="text-sm md:text-base font-bold text-zinc-950 tracking-tight truncate mt-0.5">
+            <h1 className="text-sm md:text-base font-bold text-zinc-950 dark:text-[#E6EDF3] tracking-tight truncate mt-0.5">
               {projectTitle}
             </h1>
           </div>
@@ -946,14 +946,14 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
         {/* ZONE A: COLLAPSIBLE LEFT INSPECTOR (Cast, Voice Matrix, Scene Nav) */}
         <aside className={`
           ${isInspectorOpen ? 'w-72 lg:w-80' : 'w-14'}
-          hidden md:flex flex-col border-r border-zinc-200 bg-white flex-shrink-0 transition-all duration-200 overflow-hidden
+          hidden md:flex flex-col border-r border-zinc-200 dark:border-[#30363D] bg-white dark:bg-[#161B22]/95 flex-shrink-0 transition-all duration-200 overflow-hidden
         `}>
           {isInspectorOpen ? (
-            <div className="flex flex-col h-full overflow-hidden">
-              <div className="p-3.5 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/80">
+            <div className="flex flex-col h-full overflow-hidden text-zinc-900 dark:text-[#E6EDF3]">
+              <div className="p-3.5 border-b border-zinc-200 dark:border-[#30363D] flex items-center justify-between bg-zinc-50/80 dark:bg-[#0D1117]/60">
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-zinc-600" />
-                  <span className="text-xs font-mono uppercase font-bold tracking-wider text-zinc-800">
+                  <Users className="w-4 h-4 text-zinc-600 dark:text-[#8B949E]" />
+                  <span className="text-xs font-mono uppercase font-bold tracking-wider text-zinc-800 dark:text-[#E6EDF3]">
                     Cast & Voice Roster
                   </span>
                 </div>
@@ -1091,12 +1091,12 @@ export const MultiSpeakerStudio: React.FC<MultiSpeakerStudioProps> = ({
         </aside>
 
         {/* ZONE B: MAIN ARRANGER / SCRIPT TIMELINE WORKSPACE */}
-        <main className="flex-1 flex flex-col min-w-0 bg-[#F7F7F4] overflow-hidden">
+        <main className="flex-1 flex flex-col min-w-0 bg-[#F7F7F4] dark:bg-[#0D1117] overflow-hidden">
           
           {/* SCRIPT WORKSPACE ACTION BAR */}
-          <div className="border-b border-zinc-200 bg-white/70 px-4 md:px-6 py-2 flex items-center justify-between text-xs font-mono text-zinc-600 flex-shrink-0">
+          <div className="border-b border-zinc-200 dark:border-[#30363D] bg-white/70 dark:bg-[#161B22]/80 px-4 md:px-6 py-2 flex items-center justify-between text-xs font-mono text-zinc-600 dark:text-[#8B949E] flex-shrink-0 backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <span className="font-bold text-zinc-900">Script Timeline</span>
+              <span className="font-bold text-zinc-900 dark:text-[#E6EDF3]">Script Timeline</span>
               <span>•</span>
               <span>{lines.length} dialogue turns</span>
             </div>

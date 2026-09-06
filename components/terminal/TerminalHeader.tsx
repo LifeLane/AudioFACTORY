@@ -40,6 +40,8 @@ export const TerminalHeader: React.FC<TerminalHeaderProps> = ({
   onToggleTheme,
   isTerminalMode
 }) => {
+  const { terminalTheme, setTerminalTheme } = useTerminal();
+
   return (
     <header className="border-b border-[#30363D] bg-[#0D1117]/95 backdrop-blur-md sticky top-0 z-30 select-none">
       
@@ -140,6 +142,21 @@ export const TerminalHeader: React.FC<TerminalHeaderProps> = ({
             <Monitor className="w-3.5 h-3.5 text-[#4285F4]" />
             <span className="hidden sm:inline">G-TERM</span>
           </button>
+
+          {isTerminalMode && (
+            <button
+              onClick={() => setTerminalTheme(terminalTheme === 'classic' ? 'googly' : 'classic')}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-xs ${
+                terminalTheme === 'googly'
+                  ? 'border-[#EA4335]/60 bg-[#EA4335]/15 text-[#F28B82] hover:bg-[#EA4335]/25 shadow-[0_0_15px_rgba(234,67,53,0.35)] animate-pulse'
+                  : 'border-[#30363D] bg-[#161B22] text-[#8B949E] hover:text-[#E6EDF3] hover:bg-[#21262D]'
+              }`}
+              title="Switch between Classic Terminal and vibrant, bold Googly Terminal theme"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#FBBC04]" />
+              <span>{terminalTheme === 'googly' ? 'GOOGLY' : 'CLASSIC'}</span>
+            </button>
+          )}
 
           {/* Cloud Projects Button */}
           <button

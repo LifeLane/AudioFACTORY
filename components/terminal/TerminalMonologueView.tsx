@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Play, 
   Pause, 
@@ -80,6 +80,10 @@ export const TerminalMonologueView: React.FC<TerminalMonologueViewProps> = ({
   lyricalMode,
   onLyricalModeChange
 }) => {
+  const [isCommandStationMinimized, setIsCommandStationMinimized] = useState(false);
+  const [isScriptBufferMinimized, setIsScriptBufferMinimized] = useState(false);
+  const [isTimbreRouterMinimized, setIsTimbreRouterMinimized] = useState(false);
+
   const insertCue = (cue: string) => {
     onTextChange(text + (text.endsWith(' ') ? '' : ' ') + cue);
   };
@@ -95,13 +99,205 @@ export const TerminalMonologueView: React.FC<TerminalMonologueViewProps> = ({
       {/* Quota Exhaustion & Upgrade Prompt */}
       <QuotaExhaustedBanner actionName="monologue generation" />
 
-      {/* WINDOW 1: MASTER COMMAND STATION & AUDIO DECK */}
+      {/* TWO COLUMN BENTO TERMINAL GRID */}
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 transition-all duration-200 ${isScriptBufferMinimized && isTimbreRouterMinimized ? 'flex-initial' : 'flex-1 min-h-0'}`}>
+        
+        {/* LEFT COLUMN: SCRIPT EDITOR TERMINAL BUFFER (8 COLS) */}
+        <div className={`lg:col-span-8 flex flex-col transition-all duration-200 ${isScriptBufferMinimized ? 'min-h-0' : 'min-h-[360px]'}`}>
+          <TerminalWindow
+            title="SCRIPT_STREAM_BUFFER.txt"
+            subtitle="Spoken Speech Synthesis Pipeline"
+            badge={`${text.length} CHARS`}
+            badgeColor="blue"
+            accentColor="green"
+            className="h-full"
+            isMinimized={isScriptBufferMinimized}
+            onMinimizeChange={setIsScriptBufferMinimized}
+            headerActions={
+              <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                <button
+                  onClick={() => onTextChange(selectedStyle.templateText)}
+                  className="text-[#8B949E] hover:text-[#E6EDF3] transition-colors"
+                  title="Reset to persona default template"
+                >
+                  [RESET]
+                </button>
+                <span className="text-[#30363D]">|</span>
+                <button
+                  onClick={() => onTextChange('')}
+                  className="text-[#EA4335] hover:text-[#FF6B6B] transition-colors"
+                  title="Clear all script buffer"
+                >
+                  [CLEAR]
+                </button>
+              </div>
+            }
+          >
+            <div className="flex-1 p-3.5 bg-[#161B22] flex flex-col gap-3 min-h-0">
+              
+              {/* Cue Injectors Header */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-[#21262D] pb-2.5 flex-shrink-0">
+                <span className="text-[10px] font-mono font-bold text-[#8B949E] uppercase tracking-wide">
+                  Injection Hooks:
+                </span>
+                {DRAMA_CUES.map((cue) => (
+                  <button
+                    key={cue.label}
+                    onClick={() => insertCue(cue.tag)}
+                    className="px-2 py-1 rounded bg-[#21262D] border border-[#30363D] hover:border-[#34A853] text-[#E6EDF3] hover:text-[#34A853] font-mono text-[10px] uppercase transition-all select-none active:scale-95"
+                  >
+                    {cue.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Lyrical / Emotional Fine-Tuning controls in G-TERM style */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2.5 rounded-lg border border-[#30363D] bg-[#0D1117]/60 flex-shrink-0">
+                {/* Lyrical Mode Toggle */}
+                <div className="flex items-center justify-between border-r border-[#21262D]/60 pr-3 last:border-0 last:pr-0">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-mono font-bold text-[#E6EDF3]">LYRICAL_MELODY_ENGINE</span>
+                    <span className="text-[9px] font-mono text-[#8B949E]">Improves voice note cadence</span>
+                  </div>
+                  <button
+                    onClick={() => onLyricalModeChange(!lyricalMode)}
+                    className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      lyricalMode ? 'bg-[#34A853]' : 'bg-[#30363D]'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        lyricalMode ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Emotional Pitch Level Preset Selector */}
+                <div className="flex items-center justify-between pl-0 sm:pl-3">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-mono font-bold text-[#E6EDF3]">EMOTION_COEFFICIENT</span>
+                    <span className="text-[9px] font-mono text-[#8B949E]">Sets psychological coloring</span>
+                  </div>
+                  <select
+                    value={emotionalMode}
+                    onChange={(e) => onEmotionalModeChange(e.target.value)}
+                    className="p-1 px-1.5 rounded bg-[#21262D] border border-[#30363D] text-[#E6EDF3] font-mono text-[10px] outline-none cursor-pointer hover:border-[#FBBC04]"
+                  >
+                    <option value="none">00_FLAT_MONO</option>
+                    <option value="whisper">01_WHISPER</option>
+                    <option value="lyrical">02_SPOKEN_MELODY</option>
+                    <option value="dramatic">03_DRAMA_CREST</option>
+                    <option value="extreme">04_EMOTION_MAX</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Main Code-like Textarea */}
+              <div className="flex-1 relative min-h-0">
+                <textarea
+                  value={text}
+                  onChange={(e) => onTextChange(e.target.value)}
+                  className="w-full h-full p-4 border border-[#30363D] hover:border-[#8B949E] focus:border-[#34A853] rounded-lg font-mono text-xs sm:text-sm bg-[#0D1117] text-[#C9D1D9] focus:outline-none focus:ring-1 focus:ring-[#34A853]/50 resize-none leading-relaxed selection:bg-[#34A853]/30 custom-scrollbar"
+                  placeholder="// ENTER VOICENOTE PROMPT SCRIPT HERE... //"
+                />
+                
+                {/* Decorative terminal watermark */}
+                <div className="absolute bottom-3 right-3 pointer-events-none text-[9px] font-mono text-[#30363D] select-none uppercase">
+                  pipeline.codec: PCM_24_RAW
+                </div>
+              </div>
+
+              {/* Bottom Telemetry Status bar */}
+              <div className="mt-3 pt-2 border-t border-[#21262D] flex items-center justify-between text-[10px] font-mono text-[#8B949E] flex-shrink-0">
+                <span>ENCODING: UTF-8 // 24kHz SAMPLING</span>
+                <span className="text-[#34A853]">STATUS: READY TO DISPATCH</span>
+              </div>
+
+            </div>
+          </TerminalWindow>
+        </div>
+
+        {/* RIGHT COLUMN: VOCAL TIMBRE & PERSONA MATRIX (4 COLS) */}
+        <div className={`lg:col-span-4 flex flex-col transition-all duration-200 ${isTimbreRouterMinimized ? 'min-h-0' : 'min-h-[360px]'}`}>
+          <TerminalWindow
+            title="VOCAL_TIMBRE_ROUTER.conf"
+            subtitle="Speaker Model Selection"
+            badge={selectedStyle.name}
+            badgeColor="yellow"
+            accentColor="yellow"
+            className="h-full"
+            isMinimized={isTimbreRouterMinimized}
+            onMinimizeChange={setIsTimbreRouterMinimized}
+            headerActions={
+              <button
+                onClick={onOpenVoiceConfig}
+                className="p-1 rounded text-[#8B949E] hover:text-[#E6EDF3] hover:bg-[#21262D] transition-colors"
+                title="Configure Voice Parameters"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            }
+          >
+            <div className="flex-1 p-3 bg-[#161B22] flex flex-col gap-2 overflow-y-auto custom-scrollbar">
+              
+              <div className="text-[10px] font-mono text-[#8B949E] pb-1 uppercase font-bold">
+                Timbre Profiles available:
+              </div>
+
+              <div className="flex-1 flex flex-col gap-2 min-h-0">
+                {INTRO_STYLES.map((style) => {
+                  const isSelected = selectedStyle.id === style.id;
+                  
+                  return (
+                    <div
+                      key={style.id}
+                      onClick={() => onSelectStyle(style)}
+                      className={`p-3 rounded-lg border font-mono text-xs cursor-pointer select-none transition-all ${
+                        isSelected
+                          ? 'border-[#FBBC04] bg-[#FBBC04]/10 shadow-[0_0_12px_rgba(251,188,4,0.15)] text-white'
+                          : 'border-[#30363D] bg-[#0D1117]/60 text-[#8B949E] hover:border-[#8B949E] hover:bg-[#161B22]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between font-bold">
+                        <span className={isSelected ? 'text-[#FBBC04]' : 'text-[#E6EDF3]'}>
+                          {style.name}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#21262D]">
+                          {style.id === 'custom' ? 'USER_DEF' : 'SYS_PRE'}
+                        </span>
+                      </div>
+                      
+                      <div className="text-[10px] text-[#8B949E] mt-1 line-clamp-2 leading-relaxed">
+                        {style.description}
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between text-[10px] font-mono pt-1.5 border-t border-[#30363D]">
+                        <span className="text-[#8B949E]">DEFAULT: {style.defaultVoice}</span>
+                        {isSelected && (
+                          <span className="text-[#34A853] font-bold">● PATCHED</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          </TerminalWindow>
+        </div>
+
+      </div>
+
+      {/* WINDOW 1: MASTER COMMAND STATION & AUDIO DECK (Placed at bottom) */}
       <TerminalWindow
         title="MASTER_COMMAND_STATION.exec"
         subtitle="Linear PCM 24kHz / Neural Synthesis Core"
         badge={isLoading ? 'PROCESSING' : isPlaying ? 'ON AIR' : generatedAudio ? 'BUFFER READY' : 'STANDBY'}
         badgeColor={isLoading ? 'yellow' : isPlaying ? 'red' : generatedAudio ? 'green' : 'blue'}
         accentColor="blue"
+        isMinimized={isCommandStationMinimized}
+        onMinimizeChange={setIsCommandStationMinimized}
       >
         <div className="p-3.5 sm:p-4 bg-[#161B22] flex flex-col gap-3.5">
           
@@ -244,205 +440,6 @@ export const TerminalMonologueView: React.FC<TerminalMonologueViewProps> = ({
 
         </div>
       </TerminalWindow>
-
-      {/* TWO COLUMN BENTO TERMINAL GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
-        
-        {/* LEFT COLUMN: SCRIPT EDITOR TERMINAL BUFFER (8 COLS) */}
-        <div className="lg:col-span-8 flex flex-col min-h-[360px]">
-          <TerminalWindow
-            title="SCRIPT_STREAM_BUFFER.txt"
-            subtitle="Spoken Speech Synthesis Pipeline"
-            badge={`${text.length} CHARS`}
-            badgeColor="blue"
-            accentColor="green"
-            className="h-full"
-            headerActions={
-              <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                <button
-                  onClick={() => onTextChange(selectedStyle.templateText)}
-                  className="text-[#8B949E] hover:text-[#E6EDF3] transition-colors"
-                  title="Reset to persona default template"
-                >
-                  [RESET]
-                </button>
-                <span className="text-[#30363D]">|</span>
-                <button
-                  onClick={() => onTextChange('')}
-                  className="text-[#8B949E] hover:text-[#EA4335] transition-colors"
-                  title="Clear script buffer"
-                >
-                  [CLEAR]
-                </button>
-              </div>
-            }
-          >
-            <div className="flex-1 flex flex-col p-3 sm:p-4 bg-[#0D1117] min-h-0">
-              
-              {/* Quick Drama Injector Chips with safe touch padding */}
-              <div className="flex items-center gap-2 py-2 mb-2 border-b border-[#21262D] overflow-x-auto custom-scrollbar flex-shrink-0">
-                <span className="text-[10px] font-mono text-[#8B949E] uppercase font-bold flex-shrink-0">
-                  CUES:
-                </span>
-                {DRAMA_CUES.map((cue, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => insertCue(cue.tag)}
-                    className="px-2.5 py-1 rounded bg-[#161B22] hover:bg-[#21262D] border border-[#30363D] hover:border-[#FBBC04] text-[11px] font-mono text-[#FBBC04] whitespace-nowrap transition-colors flex-shrink-0"
-                  >
-                    + {cue.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Dynamic Emotional Modes & Poetic Lyrical Mode Options */}
-              <div className="flex flex-wrap items-center justify-between gap-4 py-2.5 px-3 mb-3 bg-[#161B22] border border-[#21262D] rounded-lg flex-shrink-0">
-                {/* Lyrical Mode Toggle */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-[#8B949E] uppercase font-bold">Lyrical Mode:</span>
-                  <button
-                    onClick={() => onLyricalModeChange(!lyricalMode)}
-                    className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      lyricalMode ? 'bg-[#34A853]' : 'bg-[#30363D]'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        lyricalMode ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-[10px] font-mono uppercase font-bold ${lyricalMode ? 'text-[#34A853]' : 'text-[#8B949E]'}`}>
-                    {lyricalMode ? 'ACTIVE' : 'STANDBY'}
-                  </span>
-                </div>
-
-                {/* Emotional Mode Selector (Only for The Last Voice) */}
-                {selectedStyle.id === 'the_last_voice' && (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] font-mono text-[#8B949E] uppercase font-bold flex-shrink-0">EMO_PRESET:</span>
-                    <div className="relative inline-block text-left">
-                      <select
-                        value={emotionalMode}
-                        onChange={(e) => onEmotionalModeChange(e.target.value)}
-                        className="bg-[#0D1117] text-[#FBBC04] border border-[#30363D] hover:border-[#FBBC04] rounded px-2.5 py-1 text-xs font-mono focus:outline-none cursor-pointer"
-                      >
-                        {['Quiet Love', 'Longing', 'Heartbreak', 'Memory', 'Unsent Letter', 'Acceptance', 'Cinematic Realization', 'Pure Poetry'].map((mode) => (
-                          <option key={mode} value={mode} className="bg-[#0D1117] text-[#E6EDF3]">
-                            {mode.toUpperCase()}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Textarea Editor Styled like Vim/Nano Buffer */}
-              <div className="relative flex-1 flex min-h-[220px]">
-                {/* Line numbers simulated */}
-                <div className="w-8 pr-2 text-right select-none font-mono text-xs text-[#484F58] leading-relaxed hidden sm:block">
-                  {Array.from({ length: Math.max(8, text.split('\n').length + 2) }).map((_, i) => (
-                    <div key={i}>{String(i + 1).padStart(2, '0')}</div>
-                  ))}
-                </div>
-
-                <textarea
-                  value={text}
-                  onChange={(e) => onTextChange(e.target.value)}
-                  placeholder=">_ Enter prompt or speech script here... (e.g. In a world where neural networks speak with emotion...)"
-                  className="flex-1 p-2 bg-transparent text-[#E6EDF3] font-mono text-xs sm:text-sm leading-relaxed focus:outline-none resize-none overflow-y-auto custom-scrollbar border-l border-[#21262D] pl-3"
-                />
-              </div>
-
-              {/* Status Bar */}
-              <div className="mt-3 pt-2 border-t border-[#21262D] flex items-center justify-between text-[10px] font-mono text-[#8B949E] flex-shrink-0">
-                <span>ENCODING: UTF-8 // 24kHz SAMPLING</span>
-                <span className="text-[#34A853]">STATUS: READY TO DISPATCH</span>
-              </div>
-
-            </div>
-          </TerminalWindow>
-        </div>
-
-        {/* RIGHT COLUMN: VOCAL TIMBRE & PERSONA MATRIX (4 COLS) */}
-        <div className="lg:col-span-4 flex flex-col min-h-[360px]">
-          <TerminalWindow
-            title="VOCAL_TIMBRE_ROUTER.conf"
-            subtitle="Speaker Model Selection"
-            badge={selectedStyle.name}
-            badgeColor="yellow"
-            accentColor="yellow"
-            className="h-full"
-            headerActions={
-              <button
-                onClick={onOpenVoiceConfig}
-                className="p-1 rounded text-[#8B949E] hover:text-[#E6EDF3] hover:bg-[#21262D] transition-colors"
-                title="Configure Voice Parameters"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-            }
-          >
-            <div className="flex-1 p-3 bg-[#161B22] flex flex-col gap-2 overflow-y-auto custom-scrollbar">
-              
-              <div className="text-[10px] font-mono text-[#8B949E] pb-1 uppercase font-bold">
-                ACTIVE_VOICE: <span className="text-[#4285F4]">{selectedVoice}</span>
-              </div>
-
-              {/* Persona Terminal Cards */}
-              <div className="space-y-2 flex-1">
-                {INTRO_STYLES.map((style: IntroStyle, idx: number) => {
-                  const isSelected = selectedStyle.id === style.id;
-                  const colors = ['#EA4335', '#4285F4', '#FBBC04', '#34A853'];
-                  const color = colors[idx % colors.length];
-
-                  return (
-                    <div
-                      key={style.id}
-                      onClick={() => onSelectStyle(style)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-                        isSelected
-                          ? 'border-[#4285F4] bg-[#21262D] shadow-[0_0_12px_rgba(66,133,244,0.25)]'
-                          : 'border-[#30363D] bg-[#0D1117] hover:border-[#8B949E] hover:bg-[#161B22]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span 
-                            className="w-2.5 h-2.5 rounded-full" 
-                            style={{ backgroundColor: color, boxShadow: isSelected ? `0 0 8px ${color}` : 'none' }}
-                          />
-                          <span className="text-xs font-mono font-bold text-[#E6EDF3]">
-                            {style.name}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-mono text-[#8B949E]">
-                          PID: {100 + idx}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] font-mono text-[#8B949E] mt-1 line-clamp-2">
-                        {style.description}
-                      </p>
-
-                      <div className="mt-2 flex items-center justify-between text-[10px] font-mono pt-1.5 border-t border-[#30363D]">
-                        <span className="text-[#8B949E]">DEFAULT: {style.defaultVoice}</span>
-                        {isSelected && (
-                          <span className="text-[#34A853] font-bold">● PATCHED</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-            </div>
-          </TerminalWindow>
-        </div>
-
-      </div>
 
     </div>
   );

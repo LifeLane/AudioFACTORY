@@ -24,6 +24,8 @@ interface TerminalContextValue {
   clearLogs: () => void;
   isAudioActive: boolean;
   setIsAudioActive: (val: boolean) => void;
+  terminalTheme: 'classic' | 'googly';
+  setTerminalTheme: (val: 'classic' | 'googly') => void;
 }
 
 const TerminalContext = createContext<TerminalContextValue | undefined>(undefined);
@@ -73,6 +75,14 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [logs, setLogs] = useState<TerminalLogEntry[]>(INITIAL_LOGS);
   const [isAudioActive, setIsAudioActive] = useState<boolean>(false);
+  const [terminalTheme, setTerminalTheme] = useState<'classic' | 'googly'>(() => {
+    const saved = localStorage.getItem('g_terminal_theme');
+    return (saved === 'classic' || saved === 'googly') ? saved : 'classic';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('g_terminal_theme', terminalTheme);
+  }, [terminalTheme]);
 
   useEffect(() => {
     localStorage.setItem('g_terminal_mode', String(isTerminalMode));
@@ -128,7 +138,9 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addLog,
         clearLogs,
         isAudioActive,
-        setIsAudioActive
+        setIsAudioActive,
+        terminalTheme,
+        setTerminalTheme
       }}
     >
       {children}

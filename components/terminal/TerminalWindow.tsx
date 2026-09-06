@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Sparkles
 } from 'lucide-react';
+import { useTerminal } from './TerminalContext';
 
 export interface TerminalWindowProps {
   id?: string;
@@ -23,6 +24,8 @@ export interface TerminalWindowProps {
   headerActions?: React.ReactNode;
   onClose?: () => void;
   defaultMinimized?: boolean;
+  isMinimized?: boolean;
+  onMinimizeChange?: (minimized: boolean) => void;
   canMaximize?: boolean;
   accentColor?: 'blue' | 'red' | 'yellow' | 'green';
 }
@@ -38,11 +41,49 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
   headerActions,
   onClose,
   defaultMinimized = false,
+  isMinimized: isMinimizedProp,
+  onMinimizeChange,
   canMaximize = true,
   accentColor = 'blue'
 }) => {
-  const [isMinimized, setIsMinimized] = useState<boolean>(defaultMinimized);
+  const [internalMinimized, setInternalMinimized] = useState<boolean>(defaultMinimized);
+  const isMinimized = isMinimizedProp !== undefined ? isMinimizedProp : internalMinimized;
+  const { terminalTheme } = useTerminal();
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+
+  const setIsMinimized = (val: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof val === 'function' ? val(isMinimized) : val;
+    if (isMinimizedProp === undefined) {
+      setInternalMinimized(nextVal);
+    }
+    if (onMinimizeChange) {
+      onMinimizeChange(nextVal);
+    }
+  };
+
+  const getGooglyBorderAndShadow = () => {
+    if (terminalTheme !== 'googly') return 'border-[#30363D] shadow-2xl';
+    switch (accentColor) {
+      case 'red': return 'border-[#EA4335]/70 shadow-[0_0_20px_rgba(234,67,53,0.18)]';
+      case 'yellow': return 'border-[#FBBC04]/70 shadow-[0_0_20px_rgba(251,188,4,0.18)]';
+      case 'green': return 'border-[#34A853]/70 shadow-[0_0_20px_rgba(52,168,83,0.18)]';
+      case 'blue':
+      default:
+        return 'border-[#4285F4]/70 shadow-[0_0_20px_rgba(66,133,244,0.18)]';
+    }
+  };
+
+  const getGooglyLeftAccent = () => {
+    if (terminalTheme !== 'googly') return '';
+    switch (accentColor) {
+      case 'red': return 'border-l-[5px] border-l-[#EA4335]';
+      case 'yellow': return 'border-l-[5px] border-l-[#FBBC04]';
+      case 'green': return 'border-l-[5px] border-l-[#34A853]';
+      case 'blue':
+      default:
+        return 'border-l-[5px] border-l-[#4285F4]';
+    }
+  };
 
   const getAccentBorderClass = () => {
     switch (accentColor) {
@@ -66,14 +107,18 @@ export const TerminalWindow: React.FC<TerminalWindowProps> = ({
     }
   };
 
+  const parsedClassName = isMinimized 
+    ? className.replace(/\b(h-full|h-\[.*?\]|flex-1)\b/g, '') + ' h-auto flex-initial'
+    : className;
+
   return (
     <div
       id={id}
-      className={`relative rounded-xl border border-[#30363D] bg-[#161B22]/95 backdrop-blur-md shadow-2xl transition-all duration-250 flex flex-col ${getAccentBorderClass()} ${
+      className={`relative rounded-xl border bg-[#161B22]/95 backdrop-blur-md transition-all duration-250 flex flex-col ${getGooglyBorderAndShadow()} ${getGooglyLeftAccent()} ${getAccentBorderClass()} ${
         isMaximized 
           ? 'fixed inset-4 z-50 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)]' 
           : 'overflow-hidden'
-      } ${className}`}
+      } ${parsedClassName}`}
     >
       {/* Terminal Title Bar */}
       <div className="px-3.5 py-2.5 bg-[#0D1117]/90 border-b border-[#30363D] flex items-center justify-between gap-3 select-none flex-shrink-0">
