@@ -286,9 +286,15 @@ jobs:
             echo "KEYSTORE_CONFIGURED=false" >> $GITHUB_ENV
           fi
 
-      - name: 🏗️ Generate Gradle Wrapper
-        working-directory: ./android
-        run: gradle wrapper
+      - name: 🏗️ Bootstrap Gradle Wrapper (Safe Isolation)
+        run: |
+          mkdir -p /tmp/gradle-bootstrap
+          cd /tmp/gradle-bootstrap
+          gradle wrapper --gradle-version 8.2
+          cd -
+          cp /tmp/gradle-bootstrap/gradlew android/gradlew
+          cp /tmp/gradle-bootstrap/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.jar
+          rm -rf /tmp/gradle-bootstrap
 
       - name: 🔨 Make Gradlew Executable
         working-directory: ./android
