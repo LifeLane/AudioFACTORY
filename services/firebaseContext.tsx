@@ -67,7 +67,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // - If no session exists, establish guest mode via signInAnonymously()
   useEffect(() => {
     let isMounted = true;
-    let initialized = false;
+    let isSigningIn = false;
 
     const unsubscribe = subscribeToAuth(async (currentUser) => {
       if (!isMounted) return;
@@ -75,9 +75,11 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (currentUser) {
         setUser(currentUser);
         setAuthLoading(false);
-        initialized = true;
-      } else if (!initialized) {
-        // First boot with no active session -> establish guest session
+      } else {
+        if (isSigningIn) return;
+        isSigningIn = true;
+        setAuthLoading(true);
+        // No active session -> establish or restore anonymous guest session
         try {
           const guest = await signInAnonymously();
           if (isMounted) {
@@ -86,14 +88,11 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } catch (err) {
           console.warn("Could not establish anonymous guest session:", err);
         } finally {
+          isSigningIn = false;
           if (isMounted) {
             setAuthLoading(false);
-            initialized = true;
           }
         }
-      } else {
-        setUser(null);
-        setAuthLoading(false);
       }
     });
 

@@ -33,6 +33,7 @@ import { PlanUpgradeModal } from '../../components/PlanUpgradeModal';
 import { GenerationQuotaBadge } from '../../components/GenerationQuotaBadge';
 import { AccountDrawer } from '../../components/AccountDrawer';
 import { DailyQuotaExhaustedModal } from '../../components/DailyQuotaExhaustedModal';
+import { LockdownOverlay } from '../../components/LockdownOverlay';
 import { AuthModal } from '../../components/AuthModal';
 import { useGenerationQuota } from '../hooks/useGenerationQuota';
 import { useEntitlementStore } from '../store/useEntitlementStore';
@@ -912,6 +913,14 @@ export const StudioApp: React.FC = () => {
           setUpgradeModalOpen(true);
         }}
       />
+
+      {/* Force Lockdown Mode Overlay when credits are completely exhausted */}
+      {isExhausted && (
+        <LockdownOverlay 
+          onOpenPricing={() => setUpgradeModalOpen(true)}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+        />
+      )}
 
       {/* Auth Modal for Onboarding */}
       <AuthModal

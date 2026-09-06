@@ -167,7 +167,7 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {user ? (
+            {user && !user.isAnonymous ? (
               <button
                 onClick={logout}
                 className={`px-2.5 py-1 rounded border flex items-center gap-1 font-mono text-[11px] font-bold transition-colors ${
@@ -181,16 +181,19 @@ export const FirebaseProjectsModal: React.FC<FirebaseProjectsModalProps> = ({
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <button
-                  onClick={loginGuest}
-                  className={`px-2.5 py-1 rounded border font-mono text-[11px] font-bold transition-colors ${
-                    isTerminalMode 
-                      ? 'bg-[#21262D] hover:bg-[#30363D] border-[#30363D] text-[#E6EDF3]' 
-                      : 'bg-white hover:bg-zinc-200 border-zinc-300 text-zinc-800'
-                  }`}
-                >
-                  Guest Mode
-                </button>
+                {user?.isAnonymous && (
+                  <button
+                    onClick={logout}
+                    className={`px-2.5 py-1 rounded border flex items-center gap-1 font-mono text-[11px] font-bold transition-colors ${
+                      isTerminalMode 
+                        ? 'bg-[#21262D] hover:bg-[#30363D] border-[#30363D] text-[#E6EDF3]' 
+                        : 'bg-white hover:bg-zinc-200 border-zinc-300 text-zinc-800'
+                    }`}
+                    title="Reset guest session to start fresh"
+                  >
+                    Reset Guest
+                  </button>
+                )}
                 <button
                   onClick={loginGoogle}
                   className={`px-2.5 py-1 rounded border flex items-center gap-1 font-mono text-[11px] font-bold shadow-xs transition-colors ${
