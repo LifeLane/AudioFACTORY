@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                 if (webView.canGoBack()) {
                     webView.goBack()
                 } else {
-                    finish()
+                    showExitConfirmationDialog()
                 }
             }
         })
@@ -235,6 +235,11 @@ class MainActivity : AppCompatActivity() {
                     showErrorState()
                 }
             }
+
+            @Deprecated("Deprecated in Java")
+            override fun onReceivedError(view: WebView, errorCode: Int, description: String, failingUrl: String) {
+                showErrorState()
+            }
         }
 
         // Configure DownloadListener for generated audio downloads
@@ -374,7 +379,7 @@ class MainActivity : AppCompatActivity() {
             typeface = Typeface.MONOSPACE
             setOnClickListener {
                 hideErrorState()
-                webView.reload()
+                webView.loadUrl(PRODUCTION_URL)
             }
         }
 
@@ -423,6 +428,18 @@ class MainActivity : AppCompatActivity() {
         splashLayout.visibility = View.VISIBLE
     }
 
+    private fun showExitConfirmationDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle("Exit AudioFACTORY")
+            .setMessage("Are you sure you want to exit the application?")
+            .setPositiveButton("Exit") { _, _ ->
+                finish()
+            }
+            .setNegativeButton("Cancel", null)
+            .setCancelable(true)
+            .show()
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -449,11 +466,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         webView.onResume()
+        webView.resumeTimers()
     }
 
     override fun onPause() {
         super.onPause()
         webView.onPause()
+        webView.pauseTimers()
+        CookieManager.getInstance().flush()
     }
 
     override fun onDestroy() {
