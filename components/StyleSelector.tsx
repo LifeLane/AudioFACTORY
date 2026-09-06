@@ -12,6 +12,10 @@ interface StyleSelectorProps {
   selectedStyle: IntroStyle;
   onSelect: (style: IntroStyle) => void;
   onCustomize: () => void;
+  emotionalMode?: string;
+  onEmotionalModeChange?: (mode: string) => void;
+  lyricalMode?: boolean;
+  onLyricalModeChange?: (enabled: boolean) => void;
 }
 
 interface StyleButtonProps {
@@ -119,7 +123,15 @@ const categoryMapping: Record<Exclude<CategoryType, 'ALL'>, string> = {
   EDUCATION: 'education'
 };
 
-export const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onSelect, onCustomize }) => {
+export const StyleSelector: React.FC<StyleSelectorProps> = ({ 
+  selectedStyle, 
+  onSelect, 
+  onCustomize,
+  emotionalMode,
+  onEmotionalModeChange,
+  lyricalMode,
+  onLyricalModeChange
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryType>('ALL');
 
@@ -191,6 +203,65 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({ selectedStyle, onS
           ))}
         </div>
       </div>
+
+      {/* Speech Tuning Matrix Control Deck */}
+      {onLyricalModeChange && (
+        <div className="p-3 border-b border-zinc-200 bg-zinc-50 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-500 uppercase">
+              SPEECH_TUNING_MATRIX
+            </span>
+            <span className="text-[8px] font-mono font-bold uppercase bg-zinc-950 text-white px-1.5 py-0.5 rounded">
+              NEURAL_V2
+            </span>
+          </div>
+
+          {/* Lyrical Mode Control */}
+          <div className="flex items-center justify-between py-1 px-2 bg-white border border-zinc-200 rounded">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-mono font-bold text-zinc-900">Lyrical Mode</span>
+              <span className="text-[9px] font-mono text-zinc-500 leading-none mt-0.5">Strict pause & structure</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onLyricalModeChange(!lyricalMode)}
+                className={`relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  lyricalMode ? 'bg-amber-500' : 'bg-zinc-200'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    lyricalMode ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Emotional Mode Selector (Only when The Last Voice is selected) */}
+          {selectedStyle.id === 'the_last_voice' && onEmotionalModeChange && (
+            <div className="flex flex-col gap-1 py-1.5 px-2 bg-white border border-zinc-200 rounded">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold text-zinc-900 font-bold">Emotional Preset</span>
+                <span className="text-[8px] font-mono font-bold text-amber-600 uppercase">
+                  ACTIVE
+                </span>
+              </div>
+              <select
+                value={emotionalMode}
+                onChange={(e) => onEmotionalModeChange(e.target.value)}
+                className="w-full bg-zinc-50 text-zinc-800 border border-zinc-200 hover:border-zinc-300 rounded px-2 py-1 text-xs font-mono focus:outline-none cursor-pointer mt-1"
+              >
+                {['Quiet Love', 'Longing', 'Heartbreak', 'Memory', 'Unsent Letter', 'Acceptance', 'Cinematic Realization', 'Pure Poetry'].map((mode) => (
+                  <option key={mode} value={mode}>
+                    {mode.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Preset List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">

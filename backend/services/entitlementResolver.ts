@@ -136,8 +136,19 @@ export async function resolveEntitlement(
         status = 'active';
       }
     }
-  } catch (err) {
-    console.warn(`[ENTITLEMENT RESOLVER ADMIN] Failed reading Firestore entitlement for ${userId}:`, err);
+  } catch (err: any) {
+    const errMsg = (err.message || '').toLowerCase();
+    if (
+      errMsg.includes('permission') ||
+      errMsg.includes('denied') ||
+      errMsg.includes('insufficient') ||
+      errMsg.includes('consumer_invalid') ||
+      errMsg.includes('credentials')
+    ) {
+      console.warn(`[ENTITLEMENT RESOLVER ADMIN] No Firestore credentials/permissions for ${userId}. Falling back to default plan.`);
+    } else {
+      console.warn(`[ENTITLEMENT RESOLVER ADMIN] Failed reading Firestore entitlement for ${userId}:`, err);
+    }
     planId = 'free';
     status = 'active';
   }

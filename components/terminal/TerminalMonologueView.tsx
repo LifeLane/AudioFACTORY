@@ -41,6 +41,10 @@ interface TerminalMonologueViewProps {
   isSaving: boolean;
   justSaved: boolean;
   onDownloadWav: () => void;
+  emotionalMode: string;
+  onEmotionalModeChange: (mode: string) => void;
+  lyricalMode: boolean;
+  onLyricalModeChange: (enabled: boolean) => void;
 }
 
 const DRAMA_CUES = [
@@ -70,7 +74,11 @@ export const TerminalMonologueView: React.FC<TerminalMonologueViewProps> = ({
   onSaveToCloud,
   isSaving,
   justSaved,
-  onDownloadWav
+  onDownloadWav,
+  emotionalMode,
+  onEmotionalModeChange,
+  lyricalMode,
+  onLyricalModeChange
 }) => {
   const insertCue = (cue: string) => {
     onTextChange(text + (text.endsWith(' ') ? '' : ' ') + cue);
@@ -286,6 +294,49 @@ export const TerminalMonologueView: React.FC<TerminalMonologueViewProps> = ({
                     + {cue.label}
                   </button>
                 ))}
+              </div>
+
+              {/* Dynamic Emotional Modes & Poetic Lyrical Mode Options */}
+              <div className="flex flex-wrap items-center justify-between gap-4 py-2.5 px-3 mb-3 bg-[#161B22] border border-[#21262D] rounded-lg flex-shrink-0">
+                {/* Lyrical Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-[#8B949E] uppercase font-bold">Lyrical Mode:</span>
+                  <button
+                    onClick={() => onLyricalModeChange(!lyricalMode)}
+                    className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      lyricalMode ? 'bg-[#34A853]' : 'bg-[#30363D]'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        lyricalMode ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-[10px] font-mono uppercase font-bold ${lyricalMode ? 'text-[#34A853]' : 'text-[#8B949E]'}`}>
+                    {lyricalMode ? 'ACTIVE' : 'STANDBY'}
+                  </span>
+                </div>
+
+                {/* Emotional Mode Selector (Only for The Last Voice) */}
+                {selectedStyle.id === 'the_last_voice' && (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-mono text-[#8B949E] uppercase font-bold flex-shrink-0">EMO_PRESET:</span>
+                    <div className="relative inline-block text-left">
+                      <select
+                        value={emotionalMode}
+                        onChange={(e) => onEmotionalModeChange(e.target.value)}
+                        className="bg-[#0D1117] text-[#FBBC04] border border-[#30363D] hover:border-[#FBBC04] rounded px-2.5 py-1 text-xs font-mono focus:outline-none cursor-pointer"
+                      >
+                        {['Quiet Love', 'Longing', 'Heartbreak', 'Memory', 'Unsent Letter', 'Acceptance', 'Cinematic Realization', 'Pure Poetry'].map((mode) => (
+                          <option key={mode} value={mode} className="bg-[#0D1117] text-[#E6EDF3]">
+                            {mode.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Textarea Editor Styled like Vim/Nano Buffer */}

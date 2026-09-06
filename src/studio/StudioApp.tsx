@@ -144,6 +144,10 @@ export const StudioApp: React.FC = () => {
   const [selectedVoice, setSelectedVoice] = useState<string>(INTRO_STYLES[0].defaultVoice);
   const [text, setText] = useState<string>(INTRO_STYLES[0].templateText);
 
+  // Custom Studio Parameter States for The Last Voice & Lyrical Synthesis
+  const [emotionalMode, setEmotionalMode] = useState<string>('Quiet Love');
+  const [lyricalMode, setLyricalMode] = useState<boolean>(true);
+
   // Audio Generation & Playback States
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isDramatizing, setIsDramatizing] = useState<boolean>(false);
@@ -222,6 +226,9 @@ export const StudioApp: React.FC = () => {
     setText(style.templateText);
     setGeneratedAudio(null);
     setAudioError(null);
+    if (style.id === 'the_last_voice') {
+      setLyricalMode(true);
+    }
   };
 
   // Switch to custom style
@@ -304,7 +311,46 @@ export const StudioApp: React.FC = () => {
         setAudioDuration(result.buffer.duration);
         playGeneratedAudio(result.buffer);
       } else {
-        const result = await generateSpeech(text, selectedVoice, selectedStyle.systemPrompt || selectedStyle.description);
+        let basePrompt = selectedStyle.systemPrompt || selectedStyle.description;
+        
+        // Add Dynamic Emotional Preset Instruction for The Last Voice
+        if (selectedStyle.id === 'the_last_voice') {
+          let emoInstruction = '';
+          switch (emotionalMode) {
+            case 'Quiet Love':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Quiet Love". Deliver with quiet affection, tender warmth, a gentle smile in the voice, and intimate, close-up reading. The emotional tone should be soft, sweet, and comforting, holding onto nostalgic affection without becoming overly sad. Keep emotional intensity strictly between 25% and 40%.';
+              break;
+            case 'Longing':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Longing". Deliver with reflective yearning, nostalgia, a slightly distant tone of remembering someone who is not there, and quiet pauses of contemplation. Keep emotional intensity between 35% and 50%.';
+              break;
+            case 'Heartbreak':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Heartbreak". Deliver with restrained sorrow, low-energy sighs, heavy emotional pauses, and vulnerable chest resonance. The feeling should be of deep, quiet, unresolved pain, but kept completely controlled—do not sob or shout. Keep emotional intensity between 40% and 60%.';
+              break;
+            case 'Memory':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Memory". Deliver with narrative, calm nostalgic recognition, and gentle, soft conversational cadence. Treat each statement as a picture from the past.';
+              break;
+            case 'Unsent Letter':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Unsent Letter". Deliver with private conversational intimacy, speaking directly as if reading a secret letter late at night.';
+              break;
+            case 'Acceptance':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Acceptance". Deliver with peaceful maturity, calm acceptance, and quiet hope. The emotional tone should be stable and resolved.';
+              break;
+            case 'Cinematic Realization':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Cinematic Realization". Deliver with precise emotional focus and cinematic impact, highlighting the realization line with deliberate slowing.';
+              break;
+            case 'Pure Poetry':
+              emoInstruction = '\n\nEMOTIONAL PRESET MODE: "Pure Poetry". Deliver with literary depth, musical phrasing, and a high focus on the beautiful flow of Devanagari Hindi sounds.';
+              break;
+          }
+          basePrompt += emoInstruction;
+        }
+
+        // Add Poetic Lyrical Mode Instruction
+        if (lyricalMode) {
+          basePrompt += '\n\nLYRICAL MODE ACTIVE: You MUST strictly respect all line breaks and punctuation. Do NOT flatten poetic text into regular prose. Ensure that commas trigger short, deliberate pauses of ~150–300 ms, and phrase breaks or line breaks trigger pauses of ~300–500 ms. Preserve the lyricism and physical structure of the text exactly as written.';
+        }
+
+        const result = await generateSpeech(text, selectedVoice, basePrompt);
         setGeneratedAudio({ buffer: result.buffer, rawData: result.rawData });
         setAudioDuration(result.buffer.duration);
         playGeneratedAudio(result.buffer);
@@ -437,6 +483,10 @@ export const StudioApp: React.FC = () => {
               isSaving={isSaving}
               justSaved={monologueJustSaved}
               onDownloadWav={handleDownload}
+              emotionalMode={emotionalMode}
+              onEmotionalModeChange={setEmotionalMode}
+              lyricalMode={lyricalMode}
+              onLyricalModeChange={setLyricalMode}
             />
           )}
 
@@ -733,6 +783,10 @@ export const StudioApp: React.FC = () => {
                 selectedStyle={selectedStyle}
                 onSelect={(style) => handleSelectStyle(style)}
                 onCustomize={handleSelectCustom}
+                emotionalMode={emotionalMode}
+                onEmotionalModeChange={setEmotionalMode}
+                lyricalMode={lyricalMode}
+                onLyricalModeChange={setLyricalMode}
               />
             </div>
 
@@ -921,6 +975,10 @@ export const StudioApp: React.FC = () => {
                   handleSelectCustom();
                   setIsMobilePersonaDrawerOpen(false);
                 }}
+                emotionalMode={emotionalMode}
+                onEmotionalModeChange={setEmotionalMode}
+                lyricalMode={lyricalMode}
+                onLyricalModeChange={setLyricalMode}
               />
             </div>
           </div>
