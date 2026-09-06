@@ -76,6 +76,11 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     localStorage.setItem('g_terminal_mode', String(isTerminalMode));
+    if (isTerminalMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [isTerminalMode]);
 
   const toggleTerminalMode = () => setIsTerminalMode(prev => !prev);

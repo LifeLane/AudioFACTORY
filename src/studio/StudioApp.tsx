@@ -369,6 +369,181 @@ export const StudioApp: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  if (isTerminalMode) {
+    return (
+      <div className="flex flex-col h-[100dvh] w-screen bg-[#0D1117] text-[#E6EDF3] overflow-hidden select-none font-mono relative">
+        {/* Terminal Scanline Background Effect */}
+        <TerminalBackgroundCanvas />
+
+        {/* Terminal Header */}
+        <TerminalHeader 
+          activeMode={activeMode}
+          onModeChange={(mode) => {
+            stopPlayback();
+            setActiveMode(mode);
+          }}
+          onOpenProjectsModal={() => setIsCloudModalOpen(true)}
+          onOpenConfigModal={() => setIsConfigOpen(true)}
+          isPlaying={isPlaying}
+          isGenerating={isGenerating}
+          onToggleTheme={toggleTerminalMode}
+          isTerminalMode={isTerminalMode}
+        />
+
+        {/* Main Content Viewport */}
+        <main className="flex-1 flex overflow-hidden relative z-10">
+          {activeMode === 'intro' && (
+            <TerminalMonologueView 
+              text={text}
+              onTextChange={setText}
+              selectedStyle={selectedStyle}
+              onSelectStyle={handleSelectStyle}
+              selectedVoice={selectedVoice}
+              onOpenVoiceConfig={() => setIsConfigOpen(true)}
+              isPlaying={isPlaying}
+              isLoading={isGenerating}
+              isDramatizing={isDramatizing}
+              generatedAudio={generatedAudio}
+              audioProgress={audioProgress}
+              audioDuration={audioDuration}
+              audioError={audioError}
+              onDismissError={() => setAudioError(null)}
+              onSynthesizeOrPlay={handleMainActionClick}
+              onDramatize={handleDramatize}
+              onSaveToCloud={async () => {
+                if (saveMonologueToCloud) {
+                  await saveMonologueToCloud({ 
+                    title: text.slice(0, 30) || 'Untitled Monologue', 
+                    text, 
+                    voice: selectedVoice, 
+                    styleId: selectedStyle.id 
+                  });
+                  setMonologueJustSaved(true);
+                  setTimeout(() => setMonologueJustSaved(false), 3000);
+                }
+              }}
+              isSaving={isSaving}
+              justSaved={monologueJustSaved}
+              onDownloadWav={handleDownload}
+            />
+          )}
+
+          {activeMode === 'multispeaker' && (
+            <div className="flex-1 flex flex-col h-full bg-[#0D1117] overflow-hidden">
+              <MultiSpeakerStudio 
+                onBgmOverlay={(buf) => setBgmBuffer(buf)} 
+                loadedProject={loadedMultiSpeakerProject}
+                onOpenCloudModal={() => setIsCloudModalOpen(true)}
+                onRequireAuth={handleRequireAuth}
+              />
+            </div>
+          )}
+
+          {activeMode === 'suite' && (
+            <div className="flex-1 flex flex-col h-full bg-[#0D1117] overflow-hidden">
+              <AudioProductionSuite
+                onBgmBufferGenerated={(buf: AudioBuffer) => setBgmBuffer(buf)}
+                activeBgmBuffer={bgmBuffer}
+                onOpenVoiceCloning={() => setIsCloningOpen(true)}
+                onRequireAuth={handleRequireAuth}
+              />
+            </div>
+          )}
+        </main>
+
+        {/* Bottom Status diagnostic overlay/drawer */}
+        <TerminalDiagnosticDrawer 
+          onTriggerSynth={handleGenerateSpeech}
+          onTriggerPlay={handleMainActionClick}
+          onTriggerExport={handleDownload}
+        />
+
+        {/* Modals & Drawers */}
+        <ConfigurationModal 
+          isOpen={isConfigOpen}
+          onClose={() => setIsConfigOpen(false)}
+          selectedVoice={selectedVoice}
+          onVoiceChange={(v) => {
+            setSelectedVoice(v);
+            setIsConfigOpen(false);
+          }}
+          voices={allAvailableVoices}
+        />
+
+        <SystemPromptModal 
+          isOpen={isPromptOpen}
+          onClose={() => setIsPromptOpen(false)}
+          prompt={selectedStyle.description}
+          isEditable={selectedStyle.id === 'custom'}
+          onSave={handleSaveCustom}
+          currentVoice={selectedVoice}
+          voices={allAvailableVoices}
+        />
+
+        <VoiceCloningModal 
+          isOpen={isCloningOpen}
+          onClose={() => setIsCloningOpen(false)}
+          onSuccess={() => {
+            getElevenLabsVoices().then(v => {
+              if (v && v.length > 0) setElevenLabsVoicesList(v);
+            });
+          }}
+        />
+
+        <PlanUpgradeModal />
+
+        <AccountDrawer 
+          isOpen={isAccountOpen}
+          onClose={() => setIsAccountOpen(false)}
+          onOpenPricing={() => {
+            setIsAccountOpen(false);
+            setUpgradeModalOpen(true);
+          }}
+        />
+
+        <DailyQuotaExhaustedModal 
+          isOpen={isQuotaExhaustedModalOpen}
+          onClose={() => setIsQuotaExhaustedModalOpen(false)}
+          onUpgrade={() => {
+            setIsQuotaExhaustedModalOpen(false);
+            setUpgradeModalOpen(true);
+          }}
+        />
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setPendingAuthAction(null);
+          }}
+          onSuccess={() => {
+            setIsAuthModalOpen(false);
+            if (pendingAuthAction) {
+              pendingAuthAction();
+              setPendingAuthAction(null);
+            }
+          }}
+        />
+
+        <FirebaseProjectsModal 
+          isOpen={isCloudModalOpen}
+          onClose={() => setIsCloudModalOpen(false)}
+          onLoadProject={(proj) => {
+            setLoadedMultiSpeakerProject(proj);
+            setActiveMode('multispeaker');
+            setIsCloudModalOpen(false);
+          }}
+          onLoadMonologue={(mono) => {
+            setText(mono.text);
+            if (mono.voice) setSelectedVoice(mono.voice);
+            setActiveMode('intro');
+            setIsCloudModalOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[100dvh] w-screen bg-[#F4F4F0] text-[#1A1A1A] overflow-hidden select-none font-sans">
       
