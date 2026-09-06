@@ -286,6 +286,10 @@ jobs:
             echo "KEYSTORE_CONFIGURED=false" >> $GITHUB_ENV
           fi
 
+      - name: 🏗️ Generate Gradle Wrapper
+        working-directory: ./android
+        run: gradle wrapper
+
       - name: 🔨 Make Gradlew Executable
         working-directory: ./android
         run: chmod +x ./gradlew
