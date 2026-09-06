@@ -85,34 +85,75 @@ export class ElevenLabsProvider implements AIProvider {
     const key = this.getKey();
     const voiceId = params.voiceNameOrId || '21m00Tcm4TlvDq8ikWAM';
 
-    const response = await this.executeWithRetry(async () => {
-      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-        method: 'POST',
-        headers: {
-          'xi-api-key': key,
-          'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg',
-        },
-        body: JSON.stringify({
-          text: params.text,
-          model_id: 'eleven_monolingual_v1',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        }),
-      });
+    // Best modern models in order of fallback priority
+    // flash_v2_5 is ultra fast, multilingual_v2 is highly robust, turbo_v2_5 is a great low-latency alternative
+    const fallbackModels = [
+      'eleven_flash_v2_5',
+      'eleven_multilingual_v2',
+      'eleven_turbo_v2_5'
+    ];
 
-      if (!res.ok) {
-        const errorJson = await res.json().catch(() => ({ detail: { message: `Status code ${res.status}` } }));
-        const errorMsg = errorJson.detail?.message || errorJson.message || `ElevenLabs synthesis failed (${res.status})`;
-        const error = new Error(errorMsg);
-        (error as any).status = res.status;
-        throw error;
+    let lastError: any;
+    let response: Response | null = null;
+
+    for (const modelId of fallbackModels) {
+      try {
+        response = await this.executeWithRetry(async () => {
+          const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            method: 'POST',
+            headers: {
+              'xi-api-key': key,
+              'Content-Type': 'application/json',
+              'Accept': 'audio/mpeg',
+            },
+            body: JSON.stringify({
+              text: params.text,
+              model_id: modelId,
+              voice_settings: {
+                stability: 0.5,
+                similarity_boost: 0.75,
+              },
+            }),
+          });
+
+          if (!res.ok) {
+            const errorJson = await res.json().catch(() => ({ detail: { message: `Status code ${res.status}` } }));
+            const errorMsg = errorJson.detail?.message || errorJson.message || `ElevenLabs synthesis failed (${res.status})`;
+            const error = new Error(errorMsg);
+            (error as any).status = res.status;
+            
+            // Mark model-related errors so we know to fallback
+            if (res.status === 400 && (errorMsg.toLowerCase().includes('model') || errorMsg.toLowerCase().includes('deprecated'))) {
+              (error as any).isModelError = true;
+            }
+            throw error;
+          }
+
+          return res;
+        });
+
+        // If successful, break out of the fallback loop
+        break;
+      } catch (error: any) {
+        lastError = error;
+        
+        // If the error isn't related to the model or a 500 error, there's no point falling back
+        // For example, if it's invalid API key (401) or text too long (400 but not model related)
+        if (error.status === 401 || error.status === 403 || error.status === 422) {
+          throw error;
+        }
+        
+        if (error.status === 400 && !error.isModelError) {
+          throw error;
+        }
+        
+        console.warn(`[ELEVENLABS] Model ${modelId} failed: ${error.message}. Attempting next fallback model...`);
       }
+    }
 
-      return res;
-    });
+    if (!response) {
+      throw lastError || new Error('Failed to generate speech with any ElevenLabs model.');
+    }
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
