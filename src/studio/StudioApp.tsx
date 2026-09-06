@@ -233,9 +233,7 @@ export const StudioApp: React.FC = () => {
 
   // Reset restricted style if user is not the admin
   useEffect(() => {
-    if (selectedStyle.id === 'the_last_voice' && user?.email?.toLowerCase() !== 'connectedtorajib@gmail.com') {
-      handleSelectStyle(INTRO_STYLES[0]);
-    }
+    // No-op: the_last_voice is now globally public.
   }, [user, selectedStyle]);
 
   // Switch to custom style

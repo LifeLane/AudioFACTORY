@@ -181,19 +181,7 @@ export class GenerationService {
     const { text, voiceNameOrId, styleInstruction, format } = params;
     const isGuest = userCtx.isGuest;
 
-    // Guard: Only the admin can use the_last_voice persona
-    if (styleInstruction && (
-      styleInstruction.toLowerCase().includes('the last voice') || 
-      styleInstruction.toLowerCase().includes('the_last_voice') ||
-      styleInstruction.toLowerCase().includes('last voice')
-    )) {
-      const email = userCtx.email?.toLowerCase();
-      if (email !== 'connectedtorajib@gmail.com') {
-        const err = new Error('The Last Voice persona is strictly reserved for the Administrator.');
-        (err as any).statusCode = 403;
-        throw err;
-      }
-    }
+    // The Last Voice persona is now globally public.
 
     const validation = validateGenerationPayload({ text, isGuest, email: userCtx.email });
     if (!validation.valid) {

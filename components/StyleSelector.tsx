@@ -140,11 +140,6 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
   const filteredStyles = useMemo(() => {
     let result = INTRO_STYLES;
 
-    // Lock down 'the_last_voice' persona to the admin user only
-    if (userEmail?.toLowerCase() !== 'connectedtorajib@gmail.com') {
-      result = result.filter(s => s.id !== 'the_last_voice');
-    }
-
     // Filter by active category
     if (activeCategory !== 'ALL') {
       const targetCategory = categoryMapping[activeCategory];
