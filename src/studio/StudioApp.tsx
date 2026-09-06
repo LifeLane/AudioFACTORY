@@ -35,6 +35,7 @@ import { AccountDrawer } from '../../components/AccountDrawer';
 import { DailyQuotaExhaustedModal } from '../../components/DailyQuotaExhaustedModal';
 import { LockdownOverlay } from '../../components/LockdownOverlay';
 import { AuthModal } from '../../components/AuthModal';
+import { Toast } from '../../components/Toast';
 import { useGenerationQuota } from '../hooks/useGenerationQuota';
 import { useEntitlementStore } from '../store/useEntitlementStore';
 import { useDeepLinks } from '../hooks';
@@ -90,6 +91,7 @@ export const StudioApp: React.FC = () => {
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [loadedMultiSpeakerProject, setLoadedMultiSpeakerProject] = useState<SavedAudioProject | null>(null);
   const [monologueJustSaved, setMonologueJustSaved] = useState(false);
+  const [apiError, setApiError] = useState<{ message: string; type: 'error' | 'warning' } | null>(null);
 
   // Navigation / Mode
   const [activeMode, setActiveMode] = useState<StudioMode>('intro');
@@ -363,10 +365,19 @@ export const StudioApp: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Generation failed:", err);
-      if (err.message && (err.message.includes('QUOTA_EXHAUSTED') || err.message.includes('daily generation limit'))) {
+      const errorMsg = err.message || "";
+      if (errorMsg.includes('QUOTA_EXHAUSTED') || errorMsg.includes('daily generation limit') || errorMsg.includes('429')) {
         setIsQuotaExhaustedModalOpen(true);
+        setApiError({ message: 'Daily generation quota exceeded.', type: 'warning' });
+      } else if (errorMsg.includes('network') || errorMsg.includes('fetch failed')) {
+        setApiError({ message: 'Network error connecting to AI services. Please check your connection.', type: 'error' });
+        setAudioError("Network error. Please try again.");
+      } else if (errorMsg.toLowerCase().includes('voice id') || errorMsg.toLowerCase().includes('deprecated')) {
+        setApiError({ message: 'The selected voice is invalid or deprecated. Please choose another voice.', type: 'error' });
+        setAudioError("Invalid voice ID.");
       } else {
-        setAudioError(err.message || "Failed to generate audio.");
+        setApiError({ message: `API Error: ${errorMsg || 'Failed to generate audio'}`, type: 'error' });
+        setAudioError(errorMsg || "Failed to generate audio.");
       }
     } finally {
       setIsGenerating(false);
@@ -999,6 +1010,14 @@ export const StudioApp: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {apiError && (
+        <Toast
+          message={apiError.message}
+          type={apiError.type}
+          onClose={() => setApiError(null)}
+        />
       )}
 
     </div>

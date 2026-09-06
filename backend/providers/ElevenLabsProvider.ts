@@ -50,6 +50,44 @@ export class ElevenLabsProvider implements AIProvider {
     return key;
   }
 
+  private cachedModels: any[] | null = null;
+  private cachedModelsTime: number = 0;
+
+  private async getAvailableModels(): Promise<any[]> {
+    const key = this.getKey();
+    const now = Date.now();
+    // Cache for 1 hour to avoid excessive API calls
+    if (this.cachedModels && now - this.cachedModelsTime < 3600000) {
+      return this.cachedModels;
+    }
+
+    try {
+      const res = await fetch('https://api.elevenlabs.io/v1/models', {
+        headers: { 'xi-api-key': key, 'Accept': 'application/json' },
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch ElevenLabs models: ${res.status}`);
+      }
+      
+      const models = await res.json();
+      if (Array.isArray(models)) {
+        this.cachedModels = models;
+        this.cachedModelsTime = now;
+        return models;
+      }
+    } catch (err) {
+      console.warn('[ELEVENLABS] Could not fetch models programmatically:', err);
+    }
+    
+    // Fallback static list if endpoint fails
+    return [
+      { model_id: 'eleven_flash_v2_5' },
+      { model_id: 'eleven_multilingual_v2' },
+      { model_id: 'eleven_turbo_v2_5' },
+    ];
+  }
+
   private async executeWithRetry<T>(fn: () => Promise<T>, maxRetries: number = 2): Promise<T> {
     let attempt = 0;
     let lastError: any;
@@ -84,17 +122,32 @@ export class ElevenLabsProvider implements AIProvider {
   public async generateSpeech(params: SpeechParams): Promise<SpeechResult> {
     const key = this.getKey();
     const voiceId = params.voiceNameOrId || '21m00Tcm4TlvDq8ikWAM';
+    
+    // Performance Tracking Start
+    const startTime = performance.now();
 
-    // Best modern models in order of fallback priority
-    // flash_v2_5 is ultra fast, multilingual_v2 is highly robust, turbo_v2_5 is a great low-latency alternative
-    const fallbackModels = [
+    // Query available models and map them
+    const availableModels = await this.getAvailableModels();
+    
+    // Create priority ranking based on latency and quality
+    // Flash models (ultra low latency), Multilingual (high quality & robust), Turbo (great fallback)
+    const modelPriority = [
       'eleven_flash_v2_5',
       'eleven_multilingual_v2',
       'eleven_turbo_v2_5'
     ];
+    
+    const fallbackModels = modelPriority.filter(id => 
+      availableModels.some(m => m.model_id === id && (m.can_do_text_to_speech !== false))
+    );
+
+    if (fallbackModels.length === 0) {
+      fallbackModels.push('eleven_multilingual_v2'); // Absolute fallback
+    }
 
     let lastError: any;
     let response: Response | null = null;
+    let successfulModel = '';
 
     for (const modelId of fallbackModels) {
       try {
@@ -123,7 +176,7 @@ export class ElevenLabsProvider implements AIProvider {
             (error as any).status = res.status;
             
             // Mark model-related errors so we know to fallback
-            if (res.status === 400 && (errorMsg.toLowerCase().includes('model') || errorMsg.toLowerCase().includes('deprecated'))) {
+            if (res.status === 400 && (errorMsg.toLowerCase().includes('model') || errorMsg.toLowerCase().includes('deprecated') || errorMsg.toLowerCase().includes('unsupported'))) {
               (error as any).isModelError = true;
             }
             throw error;
@@ -132,7 +185,7 @@ export class ElevenLabsProvider implements AIProvider {
           return res;
         });
 
-        // If successful, break out of the fallback loop
+        successfulModel = modelId;
         break;
       } catch (error: any) {
         lastError = error;
@@ -157,6 +210,10 @@ export class ElevenLabsProvider implements AIProvider {
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // Performance Tracking End
+    const duration = performance.now() - startTime;
+    console.log(`[ELEVENLABS] Synthesis completed via model ${successfulModel} for voice ${voiceId} in ${duration.toFixed(2)}ms`);
 
     return {
       audioBuffer: buffer,

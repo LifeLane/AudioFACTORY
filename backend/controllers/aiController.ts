@@ -111,12 +111,24 @@ export async function handleElevenLabsTts(req: Request, res: Response): Promise<
       return;
     }
 
-    const result = await GenerationService.generateSpeech(userCtx, {
-      text,
-      voiceNameOrId: voiceId,
-      provider: 'elevenlabs',
-      format: 'mp3',
-    });
+    let result;
+    try {
+      result = await GenerationService.generateSpeech(userCtx, {
+        text,
+        voiceNameOrId: voiceId,
+        provider: 'elevenlabs',
+        format: 'mp3',
+      });
+    } catch (elevenLabsError: any) {
+      console.warn(`[TTS] ElevenLabs failed (${elevenLabsError.message}), falling back to Gemini...`);
+      // Fallback to gemini if ElevenLabs fails (e.g., quota exceeded, api unavailable)
+      result = await GenerationService.generateSpeech(userCtx, {
+        text,
+        voiceNameOrId: 'Aoede', // Default gemini voice
+        provider: 'gemini',
+        format: 'mp3',
+      });
+    }
 
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('X-Job-Id', result.jobId);
