@@ -20,10 +20,17 @@ import { TermsPage } from './src/website/pages/TermsPage';
 import { RefundPolicyPage } from './src/website/pages/RefundPolicyPage';
 import { AccountDeletionPage } from './src/website/pages/AccountDeletionPage';
 import { StudioApp } from './src/studio/StudioApp';
+import { useAds } from './src/monetization/useAds';
+
+const AdIntegrator: React.FC = () => {
+  useAds();
+  return null;
+};
 
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <AdIntegrator />
       <Routes>
         {/* ================= MARKETING WEBSITE ROUTES ================= */}
         <Route 

@@ -38,6 +38,7 @@ import { useGenerationQuota } from '../hooks/useGenerationQuota';
 import { useEntitlementStore } from '../store/useEntitlementStore';
 import { useDeepLinks } from '../hooks';
 import { BauhausButton, getIcon, getColorClass, DownloadIcon } from '../../components/BauhausComponents';
+import { AdManager } from '../monetization/AdManager';
 import { useFirebase } from '../../services/firebaseContext';
 import { 
   Play, 
@@ -259,14 +260,16 @@ export const StudioApp: React.FC = () => {
 
     setIsDramatizing(true);
     setAudioError(null);
+    AdManager.getInstance().suppressAds('generation');
     try {
-      const dramatized = await dramatizeText(text, selectedStyle.description);
+      const dramatized = await dramatizeText(text, selectedStyle.systemPrompt || selectedStyle.description);
       setText(dramatized);
     } catch (err: any) {
       console.error("Dramatization failed:", err);
       setAudioError("Dramatization failed. Please try again.");
     } finally {
       setIsDramatizing(false);
+      AdManager.getInstance().resumeAds('generation');
     }
   };
 
@@ -288,6 +291,8 @@ export const StudioApp: React.FC = () => {
     stopPlayback();
     setIsGenerating(true);
     setAudioError(null);
+    AdManager.getInstance().suppressAds('generation');
+    AdManager.getInstance().suppressAds('voice_generation');
 
     const isEleven = elevenLabsVoicesList.some(v => v.id === selectedVoice);
 
@@ -299,7 +304,7 @@ export const StudioApp: React.FC = () => {
         setAudioDuration(result.buffer.duration);
         playGeneratedAudio(result.buffer);
       } else {
-        const result = await generateSpeech(text, selectedVoice, selectedStyle.description);
+        const result = await generateSpeech(text, selectedVoice, selectedStyle.systemPrompt || selectedStyle.description);
         setGeneratedAudio({ buffer: result.buffer, rawData: result.rawData });
         setAudioDuration(result.buffer.duration);
         playGeneratedAudio(result.buffer);
@@ -313,6 +318,8 @@ export const StudioApp: React.FC = () => {
       }
     } finally {
       setIsGenerating(false);
+      AdManager.getInstance().resumeAds('generation');
+      AdManager.getInstance().resumeAds('voice_generation');
     }
   };
 
@@ -358,15 +365,20 @@ export const StudioApp: React.FC = () => {
 
   const handleDownload = () => {
     if (!generatedAudio) return;
-    const wavBlob = audioBufferToWavBlob(generatedAudio.buffer);
-    const url = URL.createObjectURL(wavBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `audiofactory-${selectedStyle.id}-${Date.now()}.wav`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      AdManager.getInstance().suppressAds('download');
+      const wavBlob = audioBufferToWavBlob(generatedAudio.buffer);
+      const url = URL.createObjectURL(wavBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audiofactory-${selectedStyle.id}-${Date.now()}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      AdManager.getInstance().resumeAds('download');
+    }
   };
 
   if (isTerminalMode) {
@@ -473,7 +485,7 @@ export const StudioApp: React.FC = () => {
         <SystemPromptModal 
           isOpen={isPromptOpen}
           onClose={() => setIsPromptOpen(false)}
-          prompt={selectedStyle.description}
+          prompt={selectedStyle.systemPrompt || selectedStyle.description}
           isEditable={selectedStyle.id === 'custom'}
           onSave={handleSaveCustom}
           currentVoice={selectedVoice}
@@ -802,7 +814,7 @@ export const StudioApp: React.FC = () => {
       <SystemPromptModal 
         isOpen={isPromptOpen}
         onClose={() => setIsPromptOpen(false)}
-        prompt={selectedStyle.description}
+        prompt={selectedStyle.systemPrompt || selectedStyle.description}
         isEditable={selectedStyle.id === 'custom'}
         onSave={handleSaveCustom}
         currentVoice={selectedVoice}

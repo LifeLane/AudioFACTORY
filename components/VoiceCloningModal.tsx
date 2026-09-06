@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Upload, X, Volume2, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cloneVoice } from '../services/elevenLabsService';
 import { useTerminal } from './terminal/TerminalContext';
+import { AdManager } from '../src/monetization/AdManager';
 
 interface VoiceCloningModalProps {
   isOpen: boolean;
@@ -90,6 +91,7 @@ export const VoiceCloningModal: React.FC<VoiceCloningModalProps> = ({ isOpen, on
 
     setIsSubmitting(true);
     setError(null);
+    AdManager.getInstance().suppressAds('voice_clone');
     try {
       await cloneVoice(name, description, audioBlob);
       onSuccess();
@@ -98,6 +100,7 @@ export const VoiceCloningModal: React.FC<VoiceCloningModalProps> = ({ isOpen, on
       setError(err.message || "Failed to clone voice. Please verify your ElevenLabs API key.");
     } finally {
       setIsSubmitting(false);
+      AdManager.getInstance().resumeAds('voice_clone');
     }
   };
 

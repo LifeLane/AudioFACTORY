@@ -128,6 +128,11 @@ export interface IntroStyle {
   icon: 'circle' | 'square' | 'triangle' | 'half-circle' | 'rect' | 'plus';
   avatarSrc?: string;
   audioSrc?: string;
+  category?: string;
+  languages?: string[];
+  useCases?: string[];
+  tags?: string[];
+  systemPrompt?: string;
 }
 
 export interface Voice {

@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { Entitlement, UsageRecord, UserPlan, ProductIdentifier } from '../../shared/types';
 import { resolveEntitlement } from '../../shared/plans';
+import { AdManager } from '../monetization/AdManager';
 import { 
   getCurrentEntitlement, 
   getUsage, 
@@ -61,6 +62,7 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
 
   purchase: async (productId, user) => {
     set({ isLoading: true, billingMessage: null });
+    AdManager.getInstance().suppressAds('purchase');
     try {
       const result = await executePurchaseProduct(productId, user);
       if (result.success && result.entitlement) {
@@ -81,6 +83,8 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
       const msg = err.message || 'Purchase transaction failed';
       set({ isLoading: false, billingMessage: msg });
       return { success: false, message: msg };
+    } finally {
+      AdManager.getInstance().resumeAds('purchase');
     }
   },
 
@@ -111,6 +115,7 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
 
   applyPlan: async (plan, user) => {
     set({ isLoading: true });
+    AdManager.getInstance().suppressAds('purchase');
     try {
       const entitlement = await upgradePlan(plan, user);
       if (entitlement) {
@@ -119,6 +124,8 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
       }
     } catch (err) {
       console.error('Plan upgrade error:', err);
+    } finally {
+      AdManager.getInstance().resumeAds('purchase');
     }
     set({ isLoading: false });
     return false;
@@ -126,6 +133,7 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
 
   applyPlayPurchase: async (productId, token, user) => {
     set({ isLoading: true });
+    AdManager.getInstance().suppressAds('purchase');
     try {
       const result = await verifyPlayPurchase(productId, token);
       if (result.success && result.entitlement) {
@@ -134,6 +142,8 @@ export const useEntitlementStore = create<EntitlementState>((set, get) => ({
       }
     } catch (err) {
       console.error('Play verification error:', err);
+    } finally {
+      AdManager.getInstance().resumeAds('purchase');
     }
     set({ isLoading: false });
     return false;

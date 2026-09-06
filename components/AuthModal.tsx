@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, User, AlertCircle, LogIn, Disc } from 'lucide-react';
 import { useFirebase } from '../services/firebaseContext';
+import { AdManager } from '../src/monetization/AdManager';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
+    AdManager.getInstance().suppressAds('login');
     try {
       await loginGoogle();
       if (onSuccess) {
@@ -31,12 +33,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       setError(err.message || "Failed to sign in with Google.");
     } finally {
       setIsLoading(false);
+      AdManager.getInstance().resumeAds('login');
     }
   };
 
   const handleGuestSignIn = async () => {
     setIsLoading(true);
     setError(null);
+    AdManager.getInstance().suppressAds('login');
     try {
       await loginGuest();
       if (onSuccess) {
@@ -49,6 +53,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       setError(err.message || "Failed to continue as guest.");
     } finally {
       setIsLoading(false);
+      AdManager.getInstance().resumeAds('login');
     }
   };
 

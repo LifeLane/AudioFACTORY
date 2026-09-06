@@ -93,7 +93,7 @@ export const SystemPromptModal: React.FC<SystemPromptModalProps> = ({
               <h2 id="prompt-modal-title" className={`text-base sm:text-lg font-bold flex items-center gap-2 ${
                 isTerminalMode ? 'font-mono text-[#E6EDF3]' : 'text-zinc-900'
               }`}>
-                {isEditable ? 'Configure Custom Persona Style' : isTerminalMode ? 'DIRECTIVES_PROMPT_TELEMETRY' : 'System Prompt Telemetry'}
+                {isEditable ? 'Configure Custom Persona Style' : isTerminalMode ? 'DIRECTIVES_PROMPT_TELEMETRY' : 'Persona Directives'}
               </h2>
               <p className={`text-xs font-mono ${isTerminalMode ? 'text-[#8B949E]' : 'text-zinc-500'}`}>
                 {isEditable ? 'Craft your custom prompt instructions and acoustic profile' : 'Underlying prompt directives dispatched to Gemini neural voice model'}
