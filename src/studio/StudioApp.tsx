@@ -231,6 +231,13 @@ export const StudioApp: React.FC = () => {
     }
   };
 
+  // Reset restricted style if user is not the admin
+  useEffect(() => {
+    if (selectedStyle.id === 'the_last_voice' && user?.email?.toLowerCase() !== 'connectedtorajib@gmail.com') {
+      handleSelectStyle(INTRO_STYLES[0]);
+    }
+  }, [user, selectedStyle]);
+
   // Switch to custom style
   const handleSelectCustom = () => {
     stopPlayback();
@@ -787,6 +794,7 @@ export const StudioApp: React.FC = () => {
                 onEmotionalModeChange={setEmotionalMode}
                 lyricalMode={lyricalMode}
                 onLyricalModeChange={setLyricalMode}
+                userEmail={user?.email || undefined}
               />
             </div>
 
@@ -968,17 +976,18 @@ export const StudioApp: React.FC = () => {
               <StyleSelector 
                 selectedStyle={selectedStyle}
                 onSelect={(style) => {
-                  handleSelectStyle(style);
-                  setIsMobilePersonaDrawerOpen(false);
+                   handleSelectStyle(style);
+                   setIsMobilePersonaDrawerOpen(false);
                 }}
                 onCustomize={() => {
-                  handleSelectCustom();
-                  setIsMobilePersonaDrawerOpen(false);
+                   handleSelectCustom();
+                   setIsMobilePersonaDrawerOpen(false);
                 }}
                 emotionalMode={emotionalMode}
                 onEmotionalModeChange={setEmotionalMode}
                 lyricalMode={lyricalMode}
                 onLyricalModeChange={setLyricalMode}
+                userEmail={user?.email || undefined}
               />
             </div>
           </div>

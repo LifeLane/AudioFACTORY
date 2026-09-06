@@ -41,8 +41,17 @@ export function validateGenerationPayload(options: {
   linesCount?: number;
   durationSeconds?: number;
   isGuest: boolean;
+  email?: string;
 }): { valid: boolean; error?: string } {
-  const { text, linesCount, durationSeconds, isGuest } = options;
+  const { text, linesCount, durationSeconds, isGuest, email } = options;
+
+  // Admin user has no restrictions or limitations
+  if (email && email.toLowerCase() === 'connectedtorajib@gmail.com') {
+    if (text !== undefined && text.trim().length === 0) {
+      return { valid: false, error: 'Text content cannot be empty.' };
+    }
+    return { valid: true };
+  }
 
   if (text !== undefined) {
     const maxChars = isGuest ? 4000 : 15000;
@@ -160,10 +169,11 @@ export async function getTodayUsageRecord(userId: string, isGuest: boolean): Pro
  */
 export async function atomicallyReserveGeneration(
   userId: string,
-  isGuest: boolean
+  isGuest: boolean,
+  email?: string
 ): Promise<QuotaReservationResult> {
   const date = getTodayUtcDateString();
-  const entitlement = await resolveEntitlement(userId, isGuest);
+  const entitlement = await resolveEntitlement(userId, isGuest, email);
   const plan = entitlement.plan;
   const planConfig = PLANS[plan] || PLANS.guest;
   const isUnlimited = entitlement.dailyQuota === -1;

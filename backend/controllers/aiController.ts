@@ -14,6 +14,7 @@ export function extractUserFromRequest(req: Request): GenerationUserContext {
     return {
       userId: req.user.uid,
       isGuest: req.user.isAnonymous,
+      email: req.user.email,
     };
   }
 

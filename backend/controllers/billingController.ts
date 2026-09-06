@@ -21,8 +21,8 @@ export function handleGetPlans(_req: Request, res: Response): void {
  * Authoritative single entitlement endpoint
  */
 export async function handleGetEntitlement(req: Request, res: Response): Promise<void> {
-  const { userId, isGuest } = extractUserFromRequest(req);
-  const entitlement = await resolveEntitlement(userId, isGuest);
+  const { userId, isGuest, email } = extractUserFromRequest(req);
+  const entitlement = await resolveEntitlement(userId, isGuest, email);
   const usage = await getTodayUsageRecord(userId, isGuest);
 
   res.json({
@@ -81,11 +81,11 @@ export async function handleVerifyPlayPurchase(req: Request, res: Response): Pro
 export async function handleRestorePurchases(req: Request, res: Response): Promise<void> {
   try {
     const { purchases } = req.body; // Array of { productId, purchaseToken, orderId }
-    const { userId, isGuest } = extractUserFromRequest(req);
+    const { userId, isGuest, email } = extractUserFromRequest(req);
 
     if (!Array.isArray(purchases) || purchases.length === 0) {
       // If no purchases provided in request body, resolve current stored entitlement
-      const entitlement = await resolveEntitlement(userId, isGuest);
+      const entitlement = await resolveEntitlement(userId, isGuest, email);
       res.json({
         success: true,
         restored: entitlement.plan !== 'free' && entitlement.plan !== 'guest',
@@ -112,7 +112,7 @@ export async function handleRestorePurchases(req: Request, res: Response): Promi
       }
     }
 
-    const finalEntitlement = latestEntitlement || (await resolveEntitlement(userId, isGuest));
+    const finalEntitlement = latestEntitlement || (await resolveEntitlement(userId, isGuest, email));
     res.json({
       success: true,
       restored: finalEntitlement.plan !== 'free' && finalEntitlement.plan !== 'guest',

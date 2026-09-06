@@ -28,11 +28,21 @@ export function invalidateEntitlementCache(userId: string): void {
 
 export async function resolveEntitlement(
   userId: string,
-  isGuest: boolean = false
+  isGuest: boolean = false,
+  email?: string
 ): Promise<Entitlement> {
   const now = new Date();
   const nowIso = now.toISOString();
   const today = getTodayUtcDateString();
+
+  // Admin user connectedtorajib@gmail.com has absolute unlimited access with no restrictions
+  if (email && email.toLowerCase() === 'connectedtorajib@gmail.com') {
+    return buildEntitlementObject('lifetime', 0, null, null, {
+      status: 'active',
+      source: 'system',
+      autoRenewing: false,
+    });
+  }
 
   if (isGuest || !userId || userId.startsWith('guest_')) {
     const guestUsage = await getDailyUsageCount(userId || 'guest_anonymous', today);

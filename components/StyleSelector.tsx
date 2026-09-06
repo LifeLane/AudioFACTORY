@@ -16,6 +16,7 @@ interface StyleSelectorProps {
   onEmotionalModeChange?: (mode: string) => void;
   lyricalMode?: boolean;
   onLyricalModeChange?: (enabled: boolean) => void;
+  userEmail?: string;
 }
 
 interface StyleButtonProps {
@@ -130,13 +131,19 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
   emotionalMode,
   onEmotionalModeChange,
   lyricalMode,
-  onLyricalModeChange
+  onLyricalModeChange,
+  userEmail
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryType>('ALL');
 
   const filteredStyles = useMemo(() => {
     let result = INTRO_STYLES;
+
+    // Lock down 'the_last_voice' persona to the admin user only
+    if (userEmail?.toLowerCase() !== 'connectedtorajib@gmail.com') {
+      result = result.filter(s => s.id !== 'the_last_voice');
+    }
 
     // Filter by active category
     if (activeCategory !== 'ALL') {
@@ -157,7 +164,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
       
       return nameMatch || descMatch || catMatch || langMatch || useCaseMatch || tagMatch;
     });
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, userEmail]);
 
   return (
     <div className="flex flex-col h-full bg-white">

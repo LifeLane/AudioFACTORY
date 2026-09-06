@@ -51,6 +51,7 @@ export function mapGeminiToElevenLabs(voiceId: string): string {
 export interface GenerationUserContext {
   userId: string;
   isGuest: boolean;
+  email?: string;
 }
 
 export class GenerationService {
@@ -180,7 +181,21 @@ export class GenerationService {
     const { text, voiceNameOrId, styleInstruction, format } = params;
     const isGuest = userCtx.isGuest;
 
-    const validation = validateGenerationPayload({ text, isGuest });
+    // Guard: Only the admin can use the_last_voice persona
+    if (styleInstruction && (
+      styleInstruction.toLowerCase().includes('the last voice') || 
+      styleInstruction.toLowerCase().includes('the_last_voice') ||
+      styleInstruction.toLowerCase().includes('last voice')
+    )) {
+      const email = userCtx.email?.toLowerCase();
+      if (email !== 'connectedtorajib@gmail.com') {
+        const err = new Error('The Last Voice persona is strictly reserved for the Administrator.');
+        (err as any).statusCode = 403;
+        throw err;
+      }
+    }
+
+    const validation = validateGenerationPayload({ text, isGuest, email: userCtx.email });
     if (!validation.valid) {
       const err = new Error(validation.error);
       (err as any).statusCode = 400;
@@ -236,7 +251,7 @@ export class GenerationService {
     params: ScriptParams
   ) {
     const isGuest = userCtx.isGuest;
-    const validation = validateGenerationPayload({ text: params.topic, isGuest });
+    const validation = validateGenerationPayload({ text: params.topic, isGuest, email: userCtx.email });
     if (!validation.valid) {
       const err = new Error(validation.error);
       (err as any).statusCode = 400;
@@ -278,7 +293,7 @@ export class GenerationService {
   ) {
     const isGuest = userCtx.isGuest;
     const totalChars = params.lines.reduce((acc, l) => acc + (l.text?.length || 0), 0);
-    const validation = validateGenerationPayload({ linesCount: params.lines.length, isGuest });
+    const validation = validateGenerationPayload({ linesCount: params.lines.length, isGuest, email: userCtx.email });
     if (!validation.valid) {
       const err = new Error(validation.error);
       (err as any).statusCode = 400;
