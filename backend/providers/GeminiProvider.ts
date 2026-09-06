@@ -187,48 +187,65 @@ export class GeminiProvider implements AIProvider {
     const dummyVoiceName = 'Puck';
     const selectedVoice = params.voiceNameOrId || 'Algieba';
 
-    const response = await this.executeWithRetry(async () => {
-      return await ai.models.generateContent({
-        model: 'gemini-2.5-flash-preview-tts',
-        contents: [{ parts: [{ text: fullInputText }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            multiSpeakerVoiceConfig: {
-              speakerVoiceConfigs: [
-                {
-                  speaker: speakerName,
-                  voiceConfig: {
-                    prebuiltVoiceConfig: { voiceName: selectedVoice },
-                  },
-                },
-                {
-                  speaker: dummySpeakerName,
-                  voiceConfig: {
-                    prebuiltVoiceConfig: { voiceName: dummyVoiceName },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      });
-    });
+    const ttsModels = [
+      'gemini-3.1-flash-tts-preview',
+      'gemini-2.5-flash-preview-tts',
+      'gemini-2.5-flash-tts',
+    ];
 
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) {
-      throw new Error('No audio data returned from Gemini TTS engine.');
+    let lastError: any;
+    for (const modelName of ttsModels) {
+      try {
+        console.log(`[GEMINI] Attempting speech generation with model: ${modelName}`);
+        const response = await this.executeWithRetry(async () => {
+          return await ai.models.generateContent({
+            model: modelName,
+            contents: [{ parts: [{ text: fullInputText }] }],
+            config: {
+              responseModalities: [Modality.AUDIO],
+              speechConfig: {
+                multiSpeakerVoiceConfig: {
+                  speakerVoiceConfigs: [
+                    {
+                      speaker: speakerName,
+                      voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: selectedVoice },
+                      },
+                    },
+                    {
+                      speaker: dummySpeakerName,
+                      voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: dummyVoiceName },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          });
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) {
+          throw new Error(`No audio data returned from Gemini TTS engine using model ${modelName}.`);
+        }
+
+        const audioBuffer = Buffer.from(base64Audio, 'base64');
+        return {
+          audioBuffer,
+          contentType: 'audio/pcm;rate=24000',
+          sampleRate: 24000,
+          audioBase64: base64Audio,
+          format: 'wav',
+          durationSeconds: Math.round((audioBuffer.length / (24000 * 2)) * 10) / 10,
+        };
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[GEMINI] TTS generation failed for model ${modelName}:`, err.message || err);
+      }
     }
 
-    const audioBuffer = Buffer.from(base64Audio, 'base64');
-    return {
-      audioBuffer,
-      contentType: 'audio/pcm;rate=24000',
-      sampleRate: 24000,
-      audioBase64: base64Audio,
-      format: 'wav',
-      durationSeconds: Math.round((audioBuffer.length / (24000 * 2)) * 10) / 10,
-    };
+    throw lastError || new Error('All Gemini TTS models failed to generate speech.');
   }
 
   public async generateScript(params: ScriptParams): Promise<ScriptResult> {
@@ -270,29 +287,42 @@ export class GeminiProvider implements AIProvider {
       Make sure the dialogue has between 4 and 8 dynamic conversational turns that flow naturally.
     `;
 
-    try {
-      const response = await this.executeWithRetry(async () => {
-        return await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-        });
-      });
+    const textModels = [
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-3.1-flash-lite',
+    ];
 
-      const rawText = response.text || '{}';
-      return this.parseScriptResponse(rawText);
-    } catch (err) {
-      console.warn('[GEMINI] generateScript failed. Attempting Groq fallback...', err);
-      if (getGroqKey()) {
-        try {
-          const groqResponse = await callGroqCompletions(prompt, true);
-          return this.parseScriptResponse(groqResponse);
-        } catch (groqErr) {
-          console.error('[GROQ] Fallback generateScript also failed:', groqErr);
-          throw err;
-        }
+    let lastError: any;
+    for (const modelName of textModels) {
+      try {
+        console.log(`[GEMINI] Attempting generateScript with model: ${modelName}`);
+        const response = await this.executeWithRetry(async () => {
+          return await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+          });
+        });
+
+        const rawText = response.text || '{}';
+        return this.parseScriptResponse(rawText);
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[GEMINI] generateScript failed for model ${modelName}:`, err.message || err);
       }
-      throw err;
     }
+
+    console.warn('[GEMINI] All Gemini text models failed for generateScript. Attempting Groq fallback...', lastError);
+    if (getGroqKey()) {
+      try {
+        const groqResponse = await callGroqCompletions(prompt, true);
+        return this.parseScriptResponse(groqResponse);
+      } catch (groqErr) {
+        console.error('[GROQ] Fallback generateScript also failed:', groqErr);
+        throw lastError;
+      }
+    }
+    throw lastError;
   }
 
   public async generateDialogue(params: DialogueParams): Promise<DialogueResult> {
@@ -360,29 +390,42 @@ export class GeminiProvider implements AIProvider {
       }
     `;
 
-    try {
-      const response = await this.executeWithRetry(async () => {
-        return await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-        });
-      });
+    const textModels = [
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-3.1-flash-lite',
+    ];
 
-      const rawText = response.text || '{}';
-      return this.parseScriptResponse(rawText);
-    } catch (err) {
-      console.warn('[GEMINI] analyzeScript failed. Attempting Groq fallback...', err);
-      if (getGroqKey()) {
-        try {
-          const groqResponse = await callGroqCompletions(prompt, true);
-          return this.parseScriptResponse(groqResponse);
-        } catch (groqErr) {
-          console.error('[GROQ] Fallback analyzeScript also failed:', groqErr);
-          throw err;
-        }
+    let lastError: any;
+    for (const modelName of textModels) {
+      try {
+        console.log(`[GEMINI] Attempting analyzeScript with model: ${modelName}`);
+        const response = await this.executeWithRetry(async () => {
+          return await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+          });
+        });
+
+        const rawText = response.text || '{}';
+        return this.parseScriptResponse(rawText);
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[GEMINI] analyzeScript failed for model ${modelName}:`, err.message || err);
       }
-      throw err;
     }
+
+    console.warn('[GEMINI] All Gemini text models failed for analyzeScript. Attempting Groq fallback...', lastError);
+    if (getGroqKey()) {
+      try {
+        const groqResponse = await callGroqCompletions(prompt, true);
+        return this.parseScriptResponse(groqResponse);
+      } catch (groqErr) {
+        console.error('[GROQ] Fallback analyzeScript also failed:', groqErr);
+        throw lastError;
+      }
+    }
+    throw lastError;
   }
 
   public async dramatize(text: string, styleInstruction?: string): Promise<string> {
@@ -402,28 +445,41 @@ export class GeminiProvider implements AIProvider {
       Return ONLY the final dramatized spoken text without explanations, greetings, or quotation marks.
     `;
 
-    try {
-      const response = await this.executeWithRetry(async () => {
-        return await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-        });
-      });
+    const textModels = [
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-3.1-flash-lite',
+    ];
 
-      return response.text?.trim() || text;
-    } catch (err) {
-      console.warn('[GEMINI] dramatize failed. Attempting Groq fallback...', err);
-      if (getGroqKey()) {
-        try {
-          const groqResponse = await callGroqCompletions(prompt, false);
-          return groqResponse.trim();
-        } catch (groqErr) {
-          console.error('[GROQ] Fallback dramatize also failed:', groqErr);
-          throw err;
-        }
+    let lastError: any;
+    for (const modelName of textModels) {
+      try {
+        console.log(`[GEMINI] Attempting dramatize with model: ${modelName}`);
+        const response = await this.executeWithRetry(async () => {
+          return await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+          });
+        });
+
+        return response.text?.trim() || text;
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[GEMINI] dramatize failed for model ${modelName}:`, err.message || err);
       }
-      throw err;
     }
+
+    console.warn('[GEMINI] All Gemini text models failed for dramatize. Attempting Groq fallback...', lastError);
+    if (getGroqKey()) {
+      try {
+        const groqResponse = await callGroqCompletions(prompt, false);
+        return groqResponse.trim();
+      } catch (groqErr) {
+        console.error('[GROQ] Fallback dramatize also failed:', groqErr);
+        throw lastError;
+      }
+    }
+    throw lastError;
   }
 
   public async generateBGM(_params: BgmParams): Promise<BgmResult> {
