@@ -39,6 +39,7 @@ const StyleButton: React.FC<StyleButtonProps> = ({
 
   const categoryLabel = useMemo(() => {
     if (!style.category) return '';
+    if (style.category === 'south_asian') return 'INDIAN / SOUTH ASIAN';
     return style.category.replace('_', ' ').toUpperCase();
   }, [style.category]);
 

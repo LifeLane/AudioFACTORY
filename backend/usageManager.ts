@@ -134,7 +134,14 @@ export async function getTodayUsageRecord(userId: string, isGuest: boolean): Pro
     }
   } catch (err: any) {
     console.warn(`[USAGE ADMIN] Failed to fetch Firestore usage for ${userId}:`, err.message);
-    if (err.message && (err.message.includes('Permission denied') || err.message.includes('CONSUMER_INVALID') || err.message.includes('credentials'))) {
+    const errMsg = (err.message || '').toLowerCase();
+    if (
+      errMsg.includes('permission') || 
+      errMsg.includes('denied') || 
+      errMsg.includes('insufficient') || 
+      errMsg.includes('consumer_invalid') || 
+      errMsg.includes('credentials')
+    ) {
       // Fallback for dev environment without valid Firebase Admin credentials
       return {
         userId,
@@ -237,7 +244,14 @@ export async function atomicallyReserveGeneration(
     return result;
   } catch (error: any) {
     console.error('[USAGE ADMIN] Transaction reservation error (FAIL CLOSED):', error.message);
-    if (error.message && (error.message.includes('Permission denied') || error.message.includes('CONSUMER_INVALID') || error.message.includes('credentials'))) {
+    const errMsg = (error.message || '').toLowerCase();
+    if (
+      errMsg.includes('permission') || 
+      errMsg.includes('denied') || 
+      errMsg.includes('insufficient') || 
+      errMsg.includes('consumer_invalid') || 
+      errMsg.includes('credentials')
+    ) {
       // Fallback for dev environment
       return {
         allowed: true,
