@@ -32,6 +32,10 @@ service cloud.firestore {
       return ts is string && ts.size() >= 10 && ts.size() <= 50;
     }
 
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // Projects validation
     function isValidAudioProject(data, authUid) {
       return data.userId is string && data.userId == authUid
@@ -93,8 +97,34 @@ service cloud.firestore {
         && !('credits' in data);
     }
 
+    function isValidEarlyAccessRequest(data, authUid) {
+      return data.userId is string && data.userId == authUid
+        && data.email is string && data.email.size() <= 200
+        && data.planId is string && data.planId.size() <= 100
+        && data.status in ['pending', 'approved', 'rejected']
+        && isValidTimestampString(data.createdAt)
+        && isValidTimestampString(data.updatedAt);
+    }
+
+    match /earlyAccessRequests/{requestId} {
+      allow get: if isOwner(existing().userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(incoming().userId) && isValidId(requestId)
+        && isValidEarlyAccessRequest(incoming(), request.auth.uid)
+        && incoming().status == 'pending';
+      allow update: if isAdmin() && isValidEarlyAccessRequest(incoming(), existing().userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if false; // Only updated via backend
+    }
+
     match /users/{userId} {
-      allow get: if isOwner(userId) && isValidId(userId);
+      allow get: if isOwner(userId) && isValidId(userId) || isAdmin();
 
       // User Projects (Multi-speaker dialogues)
       match /projects/{projectId} {

@@ -29,8 +29,12 @@ import {
   handleGooglePlayRtdnWebhook,
   handleSimulatePurchase,
 } from './controllers/billingController';
+import { handleAdminLogin } from './controllers/adminController';
 
 export const apiRouter = Router();
+
+// Admin Route
+apiRouter.post('/admin/login', handleAdminLogin);
 
 // Health check (Public)
 apiRouter.get('/health', (_req, res) => {

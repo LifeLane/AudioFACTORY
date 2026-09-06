@@ -202,10 +202,10 @@ export const PricingPage: React.FC = () => {
 
             <div className="pt-6">
               <Link
-                to="/app/billing"
+                to="/profile"
                 className="w-full py-3 text-center text-xs font-bold text-black bg-amber-400 hover:bg-amber-300 rounded-xl block shadow-md transition-colors"
               >
-                Get Pro Monthly
+                Request Early Access
               </Link>
             </div>
           </div>
@@ -263,10 +263,10 @@ export const PricingPage: React.FC = () => {
 
             <div className="pt-6">
               <Link
-                to="/app/billing"
+                to="/profile"
                 className="w-full py-3 text-center text-xs font-black text-black bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 hover:brightness-105 rounded-xl block shadow-lg shadow-amber-500/30 transition-all active:scale-[0.98]"
               >
-                Upgrade to Pro Annual
+                Request Early Access
               </Link>
             </div>
           </div>
@@ -316,10 +316,10 @@ export const PricingPage: React.FC = () => {
 
             <div className="pt-6">
               <Link
-                to="/app/billing"
+                to="/profile"
                 className="w-full py-3 text-center text-xs font-bold text-white bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl block transition-colors"
               >
-                Claim Lifetime Pass
+                Request Early Access
               </Link>
             </div>
           </div>

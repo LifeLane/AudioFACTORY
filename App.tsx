@@ -20,6 +20,8 @@ import { TermsPage } from './src/website/pages/TermsPage';
 import { RefundPolicyPage } from './src/website/pages/RefundPolicyPage';
 import { AccountDeletionPage } from './src/website/pages/AccountDeletionPage';
 import { StudioApp } from './src/studio/StudioApp';
+import { ProfileDashboard } from './src/pages/ProfileDashboard';
+import { AdminPanel } from './src/pages/AdminPanel';
 import { useAds } from './src/monetization/useAds';
 
 const AdIntegrator: React.FC = () => {
@@ -32,6 +34,10 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <AdIntegrator />
       <Routes>
+        {/* ================= ADMIN & PROFILE ================= */}
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/profile" element={<ProfileDashboard />} />
+
         {/* ================= MARKETING WEBSITE ROUTES ================= */}
         <Route 
           path="/" 
