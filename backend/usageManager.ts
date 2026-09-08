@@ -29,6 +29,7 @@ export interface QuotaReservationResult {
   dailyQuota: number;
   remainingQuota: number;
   plan: UserPlan;
+  features?: any;
   reason?: string;
   statusCode?: number;
 }
@@ -200,6 +201,9 @@ export async function atomicallyReserveGeneration(
 
       // Check quota exhaustion
       if (!isUnlimited && currentCount >= dailyQuota) {
+        const reason = isGuest 
+          ? `Guest generation limit reached. Please sign in to receive 10 free generations daily.`
+          : `Daily generation limit of ${dailyQuota} reached for ${planConfig.name}. Premium plans are coming soon!`;
         return {
           allowed: false,
           reservationId,
@@ -207,7 +211,8 @@ export async function atomicallyReserveGeneration(
           dailyQuota,
           remainingQuota: 0,
           plan,
-          reason: `Daily generation limit of ${dailyQuota} reached for ${planConfig.name}. Please upgrade to Pro for unlimited generations or try again tomorrow after UTC midnight.`,
+          features: entitlement.features,
+          reason,
           statusCode: 429,
         };
       }
@@ -238,6 +243,7 @@ export async function atomicallyReserveGeneration(
         dailyQuota,
         remainingQuota: remaining,
         plan,
+        features: entitlement.features,
       };
     });
 
@@ -252,6 +258,7 @@ export async function atomicallyReserveGeneration(
       dailyQuota,
       remainingQuota: isUnlimited ? -1 : dailyQuota - 1,
       plan,
+      features: entitlement.features,
     };
   }
 }

@@ -141,15 +141,11 @@ export const DailyQuotaExhaustedModal: React.FC<DailyQuotaExhaustedModalProps> =
         {/* Action Buttons */}
         <div className="flex flex-col gap-2.5">
           <button
-            onClick={() => {
-              onClose();
-              onUpgrade();
-            }}
-            className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2"
+            disabled
+            className="w-full py-2.5 px-4 bg-zinc-800 text-zinc-400 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
           >
             <Crown className="w-4 h-4" />
-            <span>Upgrade to Pro</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Premium Plans Coming Soon</span>
           </button>
 
           {isGuest && (

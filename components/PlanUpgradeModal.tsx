@@ -66,12 +66,8 @@ export const PlanUpgradeModal: React.FC = () => {
   const onAndroid = isNativeAndroid();
 
   const handlePurchase = async (productId: ProductIdentifier | string) => {
-    if (isGuest) {
-      setBillingMessage('Please sign in with Google first so your purchase is tied to your account across all devices.');
-      return;
-    }
-    await purchase(productId, user);
-    await refreshEntitlement(user);
+    setBillingMessage('Premium features are currently coming soon. Stay tuned!');
+    return;
   };
 
   const handleRestore = async () => {

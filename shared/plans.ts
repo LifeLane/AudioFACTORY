@@ -19,21 +19,21 @@ export const BASE_GUEST_FEATURES: FeatureEntitlement = {
 
 export const BASE_FREE_FEATURES: FeatureEntitlement = {
   unlimitedGenerations: false,
-  elevenLabsAccess: true,
+  elevenLabsAccess: false,
   instantVoiceCloning: false,
-  bgmSoundtrackGeneration: true,
+  bgmSoundtrackGeneration: false,
   multiSpeakerStudio: true,
   losslessWavExport: true,
-  liveCollaboration: true,
+  liveCollaboration: false,
   maxDialogueLines: 15,
   concurrencyLimit: 2,
 };
 
 export const PREMIUM_FEATURES: FeatureEntitlement = {
-  unlimitedGenerations: true,
-  elevenLabsAccess: true,
-  instantVoiceCloning: true,
-  bgmSoundtrackGeneration: true,
+  unlimitedGenerations: true, // Keep unlimited gemini text/tts maybe? Or just keep it true so they don't complain about basic quota.
+  elevenLabsAccess: false,
+  instantVoiceCloning: false,
+  bgmSoundtrackGeneration: false,
   multiSpeakerStudio: true,
   losslessWavExport: true,
   liveCollaboration: true,
@@ -47,7 +47,7 @@ export const PLANS: Record<UserPlan, PlanConfig> = {
     name: 'Guest Pass',
     badge: 'Guest',
     description: 'Instant sandbox access for rapid auditioning without sign-in.',
-    dailyGenerations: 3,
+    dailyGenerations: 0,
     priceUsd: 0,
     interval: 'day',
     productType: 'free',

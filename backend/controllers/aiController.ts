@@ -7,6 +7,7 @@
 import { Request, Response } from 'express';
 import { GenerationService, GenerationUserContext } from '../services/generationService';
 import { JobService } from '../services/jobService';
+import { resolveEntitlement } from '../services/entitlementResolver';
 import { ProviderName } from '../providers/AIProvider';
 
 export function extractUserFromRequest(req: Request): GenerationUserContext {
@@ -307,7 +308,14 @@ export async function handleGetVoices(req: Request, res: Response): Promise<void
   const userCtx = extractUserFromRequest(req);
 
   try {
+    const entitlement = await resolveEntitlement(userCtx.userId, userCtx.isGuest, userCtx.email);
     const result = await GenerationService.getVoices(userCtx);
+    
+    if (!entitlement.features?.elevenLabsAccess) {
+      result.voices = result.voices.filter(v => v.provider !== 'elevenlabs');
+      result.providers = result.providers.map(p => p.name === 'elevenlabs' ? { ...p, configured: false } : p);
+    }
+    
     res.json(result);
   } catch (error: any) {
     res.status(500).json({
@@ -320,6 +328,12 @@ export async function handleGetVoices(req: Request, res: Response): Promise<void
 export async function handleElevenLabsVoices(req: Request, res: Response): Promise<void> {
   const userCtx = extractUserFromRequest(req);
   try {
+    const entitlement = await resolveEntitlement(userCtx.userId, userCtx.isGuest, userCtx.email);
+    if (!entitlement.features?.elevenLabsAccess) {
+      res.json({ available: false, voices: [] });
+      return;
+    }
+
     const result = await GenerationService.getVoices(userCtx);
     const elevenLabsOnly = result.voices.filter(v => v.provider === 'elevenlabs');
     const isConfigured = result.providers.find(p => p.name === 'elevenlabs')?.configured || false;

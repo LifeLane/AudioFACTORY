@@ -37,11 +37,18 @@ export async function resolveEntitlement(
 
   // Admin user connectedtorajib@gmail.com has absolute unlimited access with no restrictions
   if (email && email.toLowerCase() === 'connectedtorajib@gmail.com') {
-    return buildEntitlementObject('lifetime', 0, null, null, {
+    const adminEntitlement = buildEntitlementObject('lifetime', 0, null, null, {
       status: 'active',
       source: 'system',
       autoRenewing: false,
     });
+    // Force-enable all features for the admin
+    if (adminEntitlement.features) {
+      adminEntitlement.features.elevenLabsAccess = true;
+      adminEntitlement.features.instantVoiceCloning = true;
+      adminEntitlement.features.bgmSoundtrackGeneration = true;
+    }
+    return adminEntitlement;
   }
 
   if (isGuest || !userId || userId.startsWith('guest_')) {

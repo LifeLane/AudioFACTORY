@@ -28,7 +28,7 @@ export async function verifyAuth(req: Request, res: Response, next: NextFunction
   }
 
   const token = authHeader.split('Bearer ')[1].trim();
-  if (!token) {
+  if (!token || token === 'null' || token === 'undefined' || token.startsWith('guest_') || token.length < 50) {
     return next();
   }
 
@@ -44,7 +44,7 @@ export async function verifyAuth(req: Request, res: Response, next: NextFunction
 
     return next();
   } catch (err: any) {
-    console.error('[AuthMiddleware] ID token verification failed:', err.message);
+    console.error('[AuthMiddleware] ID token verification failed:', err.message, 'Token was:', token ? token.substring(0, 20) + '...' : String(token));
     // Even if token is invalid, allow passing through as guest.
     // The quota system will restrict them as an unauthenticated guest.
     return next();
