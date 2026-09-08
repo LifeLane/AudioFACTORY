@@ -36,6 +36,15 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     } catch (err) {
       console.warn('[ApiClient] Failed to retrieve Firebase ID token:', err);
     }
+  } else {
+    if (typeof window !== 'undefined') {
+      let guestId = localStorage.getItem('audiofactory_guest_id');
+      if (!guestId) {
+        guestId = `guest_${Math.random().toString(36).substring(2, 11)}_${Date.now()}`;
+        localStorage.setItem('audiofactory_guest_id', guestId);
+      }
+      headers['Authorization'] = `Bearer ${guestId}`;
+    }
   }
 
   return headers;

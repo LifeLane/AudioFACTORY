@@ -308,13 +308,7 @@ export async function handleGetVoices(req: Request, res: Response): Promise<void
   const userCtx = extractUserFromRequest(req);
 
   try {
-    const entitlement = await resolveEntitlement(userCtx.userId, userCtx.isGuest, userCtx.email);
     const result = await GenerationService.getVoices(userCtx);
-    
-    if (!entitlement.features?.elevenLabsAccess) {
-      result.voices = result.voices.filter(v => v.provider !== 'elevenlabs');
-      result.providers = result.providers.map(p => p.name === 'elevenlabs' ? { ...p, configured: false } : p);
-    }
     
     res.json(result);
   } catch (error: any) {
@@ -328,12 +322,6 @@ export async function handleGetVoices(req: Request, res: Response): Promise<void
 export async function handleElevenLabsVoices(req: Request, res: Response): Promise<void> {
   const userCtx = extractUserFromRequest(req);
   try {
-    const entitlement = await resolveEntitlement(userCtx.userId, userCtx.isGuest, userCtx.email);
-    if (!entitlement.features?.elevenLabsAccess) {
-      res.json({ available: false, voices: [] });
-      return;
-    }
-
     const result = await GenerationService.getVoices(userCtx);
     const elevenLabsOnly = result.voices.filter(v => v.provider === 'elevenlabs');
     const isConfigured = result.providers.find(p => p.name === 'elevenlabs')?.configured || false;

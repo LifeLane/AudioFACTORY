@@ -105,28 +105,6 @@ export class GenerationService {
         throw error;
       }
 
-      // Validate Premium Features based on entitlements
-      if (providerName === 'elevenlabs' && !quota.features?.elevenLabsAccess) {
-        const error = new Error('ElevenLabs access requires an active Pro subscription.');
-        (error as any).statusCode = 403;
-        (error as any).code = 'PREMIUM_FEATURE_RESTRICTED';
-        throw error;
-      }
-
-      if (jobType === 'bgm' && !quota.features?.bgmSoundtrackGeneration) {
-        const error = new Error('BGM Soundtrack generation requires an active Pro subscription.');
-        (error as any).statusCode = 403;
-        (error as any).code = 'PREMIUM_FEATURE_RESTRICTED';
-        throw error;
-      }
-
-      if (jobType === 'voice_clone' && !quota.features?.instantVoiceCloning) {
-        const error = new Error('Instant Voice Cloning requires an active Pro subscription.');
-        (error as any).statusCode = 403;
-        (error as any).code = 'PREMIUM_FEATURE_RESTRICTED';
-        throw error;
-      }
-
       quotaReserved = true;
 
       // 3. Create structured generation job record in Firestore

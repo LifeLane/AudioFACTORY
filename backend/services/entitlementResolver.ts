@@ -4,7 +4,7 @@
 * AudioFACTORY Single Authoritative Backend Entitlement Resolver (Firebase Admin SDK)
 */
 import { adminDb } from '../firebaseAdmin';
-import { getTodayUtcDateString } from '../usageManager';
+import { getTodayUtcDateString, inMemoryUsageFallback } from '../usageManager';
 import { 
   Entitlement, 
   UserPlan, 
@@ -188,9 +188,10 @@ async function getDailyUsageCount(userId: string, today: string): Promise<number
       return Number(data.generationCount || 0);
     }
   } catch (err) {
-    // Non-blocking usage fallback
+    // Non-blocking usage fallback if DB is unavailable
   }
-  return 0;
+  const cacheKey = `${userId}_${today}`;
+  return inMemoryUsageFallback.get(cacheKey) || 0;
 }
 
 export async function saveUserEntitlement(

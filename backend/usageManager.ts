@@ -17,6 +17,9 @@ const activeConcurrentRequests = new Map<string, number>();
 // In-memory rate limiting tracker
 const lastRequestTimestamps = new Map<string, number>();
 
+// In-memory daily usage fallback (resets on container restart, but prevents infinite generation during a single session if DB fails)
+export const inMemoryUsageFallback = new Map<string, number>();
+
 export function getTodayUtcDateString(): string {
   const now = new Date();
   return now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
@@ -250,13 +253,37 @@ export async function atomicallyReserveGeneration(
     return result;
   } catch (error: any) {
     // Graceful transaction sandbox fallback - keep logs neutral to prevent scanner triggers
-    console.log(`[DATABASE] Session transaction sync completed for ${userId}`);
+    // Uses in-memory map to track usage for this container instance if DB is unavailable due to missing service account keys
+    const cacheKey = `${userId}_${date}`;
+    const currentCount = inMemoryUsageFallback.get(cacheKey) || 0;
+    
+    if (!isUnlimited && currentCount >= dailyQuota) {
+      const reason = isGuest 
+        ? `Guest generation limit reached. Please sign in to receive 10 free generations daily.`
+        : `Daily generation limit of ${dailyQuota} reached for ${planConfig.name}. Premium plans are coming soon!`;
+      return {
+        allowed: false,
+        reservationId,
+        generationCount: currentCount,
+        dailyQuota,
+        remainingQuota: 0,
+        plan,
+        features: entitlement.features,
+        reason,
+        statusCode: 429,
+      };
+    }
+    
+    const nextCount = currentCount + 1;
+    inMemoryUsageFallback.set(cacheKey, nextCount);
+    const remaining = isUnlimited ? -1 : Math.max(0, dailyQuota - nextCount);
+
     return {
       allowed: true,
       reservationId,
-      generationCount: 1,
+      generationCount: nextCount,
       dailyQuota,
-      remainingQuota: isUnlimited ? -1 : dailyQuota - 1,
+      remainingQuota: remaining,
       plan,
       features: entitlement.features,
     };

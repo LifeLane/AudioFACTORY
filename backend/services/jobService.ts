@@ -58,8 +58,10 @@ export class JobService {
     try {
       const jobRef = serverDb.collection('users').doc(params.uid).collection('generationJobs').doc(params.jobId);
       await jobRef.set(jobRecord);
-    } catch (err) {
-      console.warn(`[JOBS] Failed to persist initial job ${params.jobId} in Firestore:`, err);
+    } catch (err: any) {
+      if (err.code !== 7 && err.code !== 'permission-denied') {
+        console.warn(`[JOBS] Failed to persist initial job ${params.jobId} in Firestore:`, err);
+      }
     }
 
     return jobRecord;
@@ -92,8 +94,10 @@ export class JobService {
         errorCode: null,
         ...safeMetadata,
       });
-    } catch (err) {
-      console.warn(`[JOBS] Failed to mark job ${params.jobId} completed in Firestore:`, err);
+    } catch (err: any) {
+      if (err.code !== 7 && err.code !== 'permission-denied') {
+        console.warn(`[JOBS] Failed to mark job ${params.jobId} completed in Firestore:`, err);
+      }
     }
   }
 
@@ -120,8 +124,10 @@ export class JobService {
         errorCode: params.errorCode,
         errorMessage: params.errorMessage || 'Generation failed',
       });
-    } catch (err) {
-      console.warn(`[JOBS] Failed to mark job ${params.jobId} failed in Firestore:`, err);
+    } catch (err: any) {
+      if (err.code !== 7 && err.code !== 'permission-denied') {
+        console.warn(`[JOBS] Failed to mark job ${params.jobId} failed in Firestore:`, err);
+      }
     }
   }
 
@@ -135,8 +141,10 @@ export class JobService {
       const snap = await q.get();
 
       return snap.docs.map(d => d.data() as GenerationJobRecord);
-    } catch (err) {
-      console.warn(`[JOBS] Error fetching jobs for ${uid}:`, err);
+    } catch (err: any) {
+      if (err.code !== 7 && err.code !== "permission-denied") {
+        console.warn(`[JOBS] Error fetching jobs for ${uid}:`, err);
+      }
       return [];
     }
   }

@@ -14,10 +14,16 @@ export const handleAdminLogin = async (req: Request, res: Response): Promise<voi
       const customToken = await adminAuth.createCustomToken(adminUid, { admin: true });
       
       // Ensure the admin exists in the admins collection
-      await adminDb.collection('admins').doc(adminUid).set({
-        userId: adminUid,
-        createdAt: new Date().toISOString()
-      }, { merge: true });
+      try {
+        await adminDb.collection('admins').doc(adminUid).set({
+          userId: adminUid,
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (dbError: any) {
+        if (dbError.code !== 7 && dbError.code !== 'permission-denied') {
+          console.warn('[ADMIN] Failed to persist admin record in Firestore:', dbError);
+        }
+      }
       
       res.json({ token: customToken, adminUid });
     } catch (error: any) {
