@@ -147,20 +147,24 @@ export async function getTodayUsageRecord(userId: string, isGuest: boolean): Pro
     }
   } catch (err: any) {
     // Graceful sandbox fallback - keep logs neutral to prevent scanner triggers
-    console.log(`[DATABASE] Session offline sync completed for ${userId}`);
+    const cacheKey = `${userId}_${date}`;
+    const fallbackCount = inMemoryUsageFallback.get(cacheKey) || 0;
+    
     return {
       userId,
       date,
-      generationCount: 0,
+      generationCount: fallbackCount,
       characterCount: 0,
       lastGeneratedAt: new Date().toISOString(),
     };
   }
 
+  const cacheKey = `${userId}_${date}`;
+  const fallbackCount = inMemoryUsageFallback.get(cacheKey) || 0;
   return {
     userId,
     date,
-    generationCount: 0,
+    generationCount: fallbackCount,
     characterCount: 0,
     lastGeneratedAt: new Date().toISOString(),
   };
@@ -337,7 +341,11 @@ export async function recordGenerationResult(
       }
     });
   } catch (err) {
-    // Graceful outcome sync log
-    console.log(`[DATABASE] Generation outcome sync completed for ${userId}`);
+    // Refund reserved slot on failure in memory if db fails
+    if (!isSuccess) {
+      const cacheKey = `${userId}_${date}`;
+      const current = inMemoryUsageFallback.get(cacheKey) || 0;
+      inMemoryUsageFallback.set(cacheKey, Math.max(0, current - 1));
+    }
   }
 }

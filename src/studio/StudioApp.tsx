@@ -100,7 +100,7 @@ export const StudioApp: React.FC = () => {
 
   // Entitlement store & quota
   const { refreshEntitlement, setUpgradeModalOpen } = useEntitlementStore();
-  const { isExhausted, isUnlimited } = useGenerationQuota();
+  const { isExhausted, isUnlimited, refresh: refreshQuota } = useGenerationQuota();
 
   // Modal States
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
@@ -363,6 +363,10 @@ export const StudioApp: React.FC = () => {
         setAudioDuration(result.buffer.duration);
         playGeneratedAudio(result.buffer);
       }
+      
+      // Refresh the quota after successful generation
+      refreshQuota().catch(err => console.warn('Failed to refresh quota:', err));
+
     } catch (err: any) {
       console.error("Generation failed:", err);
       const errorMsg = err.message || "";
