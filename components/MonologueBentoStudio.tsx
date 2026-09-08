@@ -40,6 +40,7 @@ interface MonologueBentoStudioProps {
   audioError: string | null;
   onDismissError: () => void;
   onSynthesizeOrPlay: () => void;
+  onRegenerate: () => void;
   onDramatize: () => void;
   onSaveToCloud: () => void;
   isSaving: boolean;
@@ -71,6 +72,7 @@ export const MonologueBentoStudio: React.FC<MonologueBentoStudioProps> = ({
   audioError,
   onDismissError,
   onSynthesizeOrPlay,
+  onRegenerate,
   onDramatize,
   onSaveToCloud,
   isSaving,
@@ -310,6 +312,18 @@ export const MonologueBentoStudio: React.FC<MonologueBentoStudioProps> = ({
 
           {/* Quick Actions (Save, Dramatize, Download) */}
           <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+            {generatedAudio && (
+              <button
+                onClick={onRegenerate}
+                disabled={isLoading}
+                className="px-2.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
+                title="Regenerate Audio"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Regenerate</span>
+              </button>
+            )}
+
             <button
               onClick={onDramatize}
               disabled={isDramatizing || !text.trim()}

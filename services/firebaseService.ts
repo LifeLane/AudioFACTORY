@@ -343,13 +343,7 @@ export function subscribeToDailyUsage(callback: (usage: UsageRecord | null) => v
       if (snapshot.exists()) {
         callback(snapshot.data() as UsageRecord);
       } else {
-        callback({
-          userId: user.uid,
-          date: today,
-          generationCount: 0,
-          characterCount: 0,
-          lastGeneratedAt: new Date().toISOString(),
-        });
+        callback(null);
       }
     },
     (error) => {

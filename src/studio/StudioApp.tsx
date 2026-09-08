@@ -488,6 +488,7 @@ export const StudioApp: React.FC = () => {
               audioError={audioError}
               onDismissError={() => setAudioError(null)}
               onSynthesizeOrPlay={handleMainActionClick}
+              onRegenerate={handleGenerateSpeech}
               onDramatize={handleDramatize}
               onSaveToCloud={async () => {
                 if (saveMonologueToCloud) {
@@ -831,6 +832,7 @@ export const StudioApp: React.FC = () => {
                 audioError={audioError}
                 onDismissError={() => setAudioError(null)}
                 onSynthesizeOrPlay={handleMainActionClick}
+                onRegenerate={handleGenerateSpeech}
                 onDramatize={handleDramatize}
                 onSaveToCloud={async () => {
                   if (saveMonologueToCloud) {
